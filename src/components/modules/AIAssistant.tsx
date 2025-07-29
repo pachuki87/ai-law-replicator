@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,9 @@ import {
   Clock
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+
+// Initialize Google AI
+const genAI = new GoogleGenerativeAI("AIzaSyCnA6rpPRXqxoBEsAv-IhR_6oy_Z0iuDoU");
 
 interface Message {
   id: string;
@@ -61,22 +65,51 @@ export const AIAssistant = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputMessage;
     setInputMessage("");
     setIsTyping(true);
 
-    // Simular respuesta de IA
-    setTimeout(() => {
+    try {
+      // Get AI response from Google Gemini
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      
+      const prompt = `Eres un asistente jurídico especializado en derecho español. Responde de manera profesional y precisa a la siguiente consulta legal: ${currentInput}
+      
+      Proporciona respuestas estructuradas, cita la normativa aplicable cuando sea relevante, y ofrece consejos prácticos. Si la consulta requiere asesoramiento específico, recomienda consultar con un abogado especializado.`;
+      
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: generateAIResponse(inputMessage),
+        content: text,
         sender: 'ai',
         timestamp: new Date(),
-        type: detectMessageType(inputMessage)
+        type: detectMessageType(currentInput)
       };
       
       setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo obtener respuesta de la IA. Inténtalo de nuevo.",
+        variant: "destructive"
+      });
+      
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "Disculpa, no pude procesar tu consulta en este momento. Por favor, inténtalo de nuevo.",
+        sender: 'ai',
+        timestamp: new Date(),
+        type: 'general'
+      };
+      
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
       setIsTyping(false);
-    }, 2000);
+    }
   };
 
   const generateAIResponse = (query: string): string => {
@@ -265,7 +298,7 @@ export const AIAssistant = () => {
                   className="w-full text-left h-auto p-3 justify-start"
                   onClick={() => {
                     setInputMessage(question);
-                    handleSendMessage();
+                    setTimeout(handleSendMessage, 100);
                   }}
                 >
                   <span className="text-sm">{question}</span>
