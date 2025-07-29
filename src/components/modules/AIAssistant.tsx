@@ -69,17 +69,33 @@ export const AIAssistant = () => {
     setInputMessage("");
     setIsTyping(true);
 
+    const maxRetries = 3;
+    let retryCount = 0;
+
+    const tryGetResponse = async (): Promise<string> => {
+      try {
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        
+        const prompt = `Eres un asistente jurídico especializado en derecho español. Responde de manera profesional y precisa a la siguiente consulta legal: ${currentInput}
+        
+        Proporciona respuestas estructuradas, cita la normativa aplicable cuando sea relevante, y ofrece consejos prácticos. Si la consulta requiere asesoramiento específico, recomienda consultar con un abogado especializado.`;
+        
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        return response.text();
+      } catch (error: any) {
+        if (error.status === 503 && retryCount < maxRetries) {
+          retryCount++;
+          const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return tryGetResponse();
+        }
+        throw error;
+      }
+    };
+
     try {
-      // Get AI response from Google Gemini
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      
-      const prompt = `Eres un asistente jurídico especializado en derecho español. Responde de manera profesional y precisa a la siguiente consulta legal: ${currentInput}
-      
-      Proporciona respuestas estructuradas, cita la normativa aplicable cuando sea relevante, y ofrece consejos prácticos. Si la consulta requiere asesoramiento específico, recomienda consultar con un abogado especializado.`;
-      
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      const text = await tryGetResponse();
 
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
@@ -90,17 +106,28 @@ export const AIAssistant = () => {
       };
       
       setMessages(prev => [...prev, aiResponse]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting AI response:', error);
+      
+      let errorMessage = "Disculpa, no pude procesar tu consulta en este momento.";
+      
+      if (error.status === 503) {
+        errorMessage = "El servicio de IA está temporalmente sobrecargado. Inténtalo de nuevo en unos segundos.";
+      } else if (error.status === 429) {
+        errorMessage = "Se ha alcanzado el límite de consultas. Espera un momento antes de intentar de nuevo.";
+      } else if (error.status === 401) {
+        errorMessage = "Error de autenticación con la API. Verifica la configuración.";
+      }
+      
       toast({
-        title: "Error",
-        description: "No se pudo obtener respuesta de la IA. Inténtalo de nuevo.",
+        title: "Error de IA",
+        description: errorMessage,
         variant: "destructive"
       });
       
       const errorResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: "Disculpa, no pude procesar tu consulta en este momento. Por favor, inténtalo de nuevo.",
+        content: errorMessage + " Por favor, inténtalo de nuevo.",
         sender: 'ai',
         timestamp: new Date(),
         type: 'general'
