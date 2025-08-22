@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/modules/Dashboard";
 import { DocumentAutomation } from "@/components/modules/DocumentAutomation";
 import { LegalResearch } from "@/components/modules/LegalResearch";
+import { DatabasesDirectory } from "@/components/modules/DatabasesDirectory";
 import { AIAssistant } from "@/components/modules/AIAssistant";
 import { CaseManagement } from "@/components/modules/CaseManagement";
 import { ResultsPrediction } from "@/components/modules/ResultsPrediction";
@@ -21,6 +22,8 @@ export const LegalApp = () => {
         return <DocumentAutomation />;
       case "research":
         return <LegalResearch />;
+      case "databases":
+        return <DatabasesDirectory />;
       case "assistant":
         return <AIAssistant />;
       case "cases":

@@ -6,7 +6,8 @@ import {
   TrendingUp, 
   Shield, 
   Home,
-  Settings
+  Settings,
+  Database
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ const modules = [
   { id: "dashboard", name: "Dashboard", icon: Home },
   { id: "documents", name: "Automatización de Documentos", icon: FileText },
   { id: "research", name: "Investigación Jurídica", icon: Search },
+  { id: "databases", name: "Bases de Datos Jurídicas", icon: Database },
   { id: "assistant", name: "Asistente IA", icon: MessageSquare },
   { id: "cases", name: "Gestión de Casos", icon: FolderOpen },
   { id: "predictions", name: "Predicción de Resultados", icon: TrendingUp },
