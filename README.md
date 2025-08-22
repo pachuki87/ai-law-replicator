@@ -1,5 +1,7 @@
 # AI Law Replicator
 
+🔗 **Repositorio GitHub**: https://github.com/pachuki87/ai-law-replicator
+
 Una aplicación web moderna para la generación automatizada de documentos legales utilizando inteligencia artificial.
 
 ## 🚀 Características
@@ -20,7 +22,7 @@ Una aplicación web moderna para la generación automatizada de documentos legal
 
 1. **Clona el repositorio**
    ```bash
-   git clone <url-del-repositorio>
+   git clone https://github.com/pachuki87/ai-law-replicator.git
    cd ai-law-replicator
    ```
 
