@@ -135,9 +135,11 @@ export const LegalResearch = () => {
         case 'commercial':
           result = await unifiedSearchService.searchCommercialOnly(query);
           break;
-        default:
+        default: {
           const searchData = await unifiedSearchService.searchAll(query);
           result = searchData.combined;
+          break;
+        }
       }
 
       setSearchResults(result);

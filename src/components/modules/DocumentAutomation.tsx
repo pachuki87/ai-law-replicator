@@ -12,10 +12,14 @@ import {
   Wand2,
   Plus,
   Clock,
-  CheckCircle
+  CheckCircle,
+  FileDown
 } from "lucide-react";
 import documentAutomation from "@/assets/document-automation.jpg";
 import { useToast } from "@/components/ui/use-toast";
+import { aiDocumentService, type GeneratedDocument } from "@/services/aiDocumentService";
+import { documentDownloadService } from "@/services/documentDownloadService";
+import { toast } from "sonner";
 
 const documentTypes = [
   { id: "contract", name: "Contrato de Arrendamiento", description: "Contrato estándar de alquiler" },
@@ -41,6 +45,8 @@ export const DocumentAutomation = () => {
     urgency: "normal"
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedDocument, setGeneratedDocument] = useState<GeneratedDocument | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   const { toast } = useToast();
 
   const handleGenerate = async () => {
@@ -55,14 +61,91 @@ export const DocumentAutomation = () => {
 
     setIsGenerating(true);
     
-    // Simular generación de documento
-    setTimeout(() => {
-      setIsGenerating(false);
+    try {
+      const selectedDocType = documentTypes.find(d => d.id === selectedType);
+      if (!selectedDocType) {
+        throw new Error("Tipo de documento no encontrado");
+      }
+
+      const document = await aiDocumentService.generateDocument({
+        typeName: selectedDocType.name,
+        clientName: formData.clientName,
+        caseNumber: formData.caseNumber || `AUTO-${Date.now()}`,
+        details: formData.details,
+        urgency: formData.urgency as 'low' | 'normal' | 'high' | 'urgent'
+      });
+
+      setGeneratedDocument(document);
       toast({
         title: "Documento Generado",
-        description: `${documentTypes.find(d => d.id === selectedType)?.name} creado exitosamente`,
+        description: `${selectedDocType.name} creado exitosamente con ${document.provider.toUpperCase()}`,
       });
-    }, 3000);
+    } catch (error) {
+      console.error('Error generando documento:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Error al generar el documento",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!generatedDocument) return;
+    
+    setIsDownloading(true);
+    try {
+      const selectedDocType = documentTypes.find(type => type.id === selectedType);
+      const fileName = `${selectedDocType?.name || 'Documento'}_${formData.clientName || 'Cliente'}_${new Date().toISOString().split('T')[0]}`;
+      
+      await documentDownloadService.downloadAsPDF(
+        generatedDocument.content,
+        fileName,
+        {
+          title: selectedDocType?.name || 'Documento Legal',
+          clientName: formData.clientName,
+          caseNumber: formData.caseNumber,
+          date: new Date().toLocaleDateString('es-ES')
+        }
+      );
+      
+      toast.success('Documento PDF descargado exitosamente');
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast.error('Error al descargar PDF');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDownloadWord = async () => {
+    if (!generatedDocument) return;
+    
+    setIsDownloading(true);
+    try {
+      const selectedDocType = documentTypes.find(type => type.id === selectedType);
+      const fileName = `${selectedDocType?.name || 'Documento'}_${formData.clientName || 'Cliente'}_${new Date().toISOString().split('T')[0]}`;
+      
+      await documentDownloadService.downloadAsWord(
+        generatedDocument.content,
+        fileName,
+        {
+          title: selectedDocType?.name || 'Documento Legal',
+          clientName: formData.clientName,
+          caseNumber: formData.caseNumber,
+          date: new Date().toLocaleDateString('es-ES')
+        }
+      );
+      
+      toast.success('Documento Word descargado exitosamente');
+    } catch (error) {
+      console.error('Error downloading Word:', error);
+      toast.error('Error al descargar Word');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -182,11 +265,50 @@ export const DocumentAutomation = () => {
                     </>
                   )}
                 </Button>
-                <Button variant="legalOutline">
-                  <Eye className="mr-2 h-4 w-4" />
-                  Vista Previa
-                </Button>
+                {generatedDocument && (
+                  <>
+                    <Button 
+                      onClick={handleDownloadPDF}
+                      disabled={isDownloading}
+                      variant="legalOutline"
+                    >
+                      {isDownloading ? (
+                        <Wand2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileDown className="mr-2 h-4 w-4" />
+                      )}
+                      PDF
+                    </Button>
+                    <Button 
+                      onClick={handleDownloadWord}
+                      disabled={isDownloading}
+                      variant="legalOutline"
+                    >
+                      {isDownloading ? (
+                        <Wand2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileDown className="mr-2 h-4 w-4" />
+                      )}
+                      Word
+                    </Button>
+                  </>
+                )}
               </div>
+              
+              {/* Mostrar documento generado */}
+              {generatedDocument && (
+                <div className="mt-6 p-4 border rounded-lg bg-legal-neutral/50">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-legal-primary">Documento Generado</h3>
+                    <div className="text-xs text-muted-foreground">
+                      Generado con {generatedDocument.provider.toUpperCase()} • {generatedDocument.createdAt}
+                    </div>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto bg-white p-4 rounded border text-sm">
+                    <pre className="whitespace-pre-wrap font-sans">{generatedDocument.content}</pre>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

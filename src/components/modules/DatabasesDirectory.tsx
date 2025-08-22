@@ -10,7 +10,7 @@ interface Database {
   description: string;
   type: 'public' | 'commercial';
   url: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
   categories: string[];
   status: 'active' | 'requires_subscription';
 }

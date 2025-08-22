@@ -83,8 +83,9 @@ export const AIAssistant = () => {
         const result = await model.generateContent(prompt);
         const response = await result.response;
         return response.text();
-      } catch (error: any) {
-        if (error.status === 503 && retryCount < maxRetries) {
+      } catch (error: unknown) {
+        const errorObj = error as { status?: number };
+        if (errorObj.status === 503 && retryCount < maxRetries) {
           retryCount++;
           const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff
           await new Promise(resolve => setTimeout(resolve, delay));
@@ -106,16 +107,17 @@ export const AIAssistant = () => {
       };
       
       setMessages(prev => [...prev, aiResponse]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error getting AI response:', error);
       
       let errorMessage = "Disculpa, no pude procesar tu consulta en este momento.";
+      const errorObj = error as { status?: number };
       
-      if (error.status === 503) {
+      if (errorObj.status === 503) {
         errorMessage = "El servicio de IA está temporalmente sobrecargado. Inténtalo de nuevo en unos segundos.";
-      } else if (error.status === 429) {
+      } else if (errorObj.status === 429) {
         errorMessage = "Se ha alcanzado el límite de consultas. Espera un momento antes de intentar de nuevo.";
-      } else if (error.status === 401) {
+      } else if (errorObj.status === 401) {
         errorMessage = "Error de autenticación con la API. Verifica la configuración.";
       }
       
