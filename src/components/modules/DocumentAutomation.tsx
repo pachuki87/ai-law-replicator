@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,13 +13,21 @@ import {
   Plus,
   Clock,
   CheckCircle,
-  FileDown
+  FileDown,
+  Loader2
 } from "lucide-react";
 import documentAutomation from "@/assets/document-automation.jpg";
 import { useToast } from "@/components/ui/use-toast";
 import { aiDocumentService, type GeneratedDocument } from "@/services/aiDocumentService";
 import { documentDownloadService } from "@/services/documentDownloadService";
+import { documentService } from "@/services/documentService";
+import caseService from "@/services/caseService";
 import { toast } from "sonner";
+import type { Database } from "@/types/database";
+
+type GeneratedDoc = Database['public']['Tables']['generated_documents']['Row'];
+type Case = Database['public']['Tables']['cases']['Row'];
+type DocumentTemplate = Database['public']['Tables']['document_templates']['Row'];
 
 const documentTypes = [
   { id: "contract", name: "Contrato de Arrendamiento", description: "Contrato estándar de alquiler" },
@@ -38,50 +46,104 @@ const recentDocuments = [
 
 export const DocumentAutomation = () => {
   const [selectedType, setSelectedType] = useState("");
+  const [selectedCase, setSelectedCase] = useState("");
   const [formData, setFormData] = useState({
-    clientName: "",
-    caseNumber: "",
-    details: "",
+    title: "",
+    content: "",
+    variables: "{}",
     urgency: "normal"
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [generatedDocument, setGeneratedDocument] = useState<GeneratedDocument | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [cases, setCases] = useState<Case[]>([]);
+  const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
+  const [recentDocuments, setRecentDocuments] = useState<GeneratedDoc[]>([]);
   const { toast } = useToast();
 
-  const handleGenerate = async () => {
-    if (!selectedType || !formData.clientName) {
+  // Load data on component mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const [casesData, templatesData, recentDocsData] = await Promise.all([
+        caseService.getCases(),
+        documentService.getPublicTemplates(),
+        documentService.getRecentDocuments(10)
+      ]);
+      setCases(casesData);
+      setTemplates(templatesData);
+      setRecentDocuments(recentDocsData);
+    } catch (error) {
+      console.error('Error loading data:', error);
       toast({
         title: "Error",
-        description: "Por favor completa los campos requeridos",
+        description: "Error al cargar los datos",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!selectedType || !formData.title || !selectedCase) {
+      toast({
+        title: "Error",
+        description: "Por favor completa todos los campos requeridos",
         variant: "destructive"
       });
       return;
     }
 
     setIsGenerating(true);
-    
     try {
-      const selectedDocType = documentTypes.find(d => d.id === selectedType);
-      if (!selectedDocType) {
-        throw new Error("Tipo de documento no encontrado");
-      }
-
-      const document = await aiDocumentService.generateDocument(
-        selectedType,
-        {
-          clientName: formData.clientName,
-          caseNumber: formData.caseNumber || `AUTO-${Date.now()}`,
-          details: formData.details,
-          urgency: formData.urgency
-        }
-      );
-
-      setGeneratedDocument(document);
-      toast({
-        title: "Documento Generado",
-        description: `${selectedDocType.name} creado exitosamente con ${document.provider.toUpperCase()}`,
+      // Create document in Supabase
+      const newDocument = await documentService.createDocument({
+        case_id: selectedCase,
+        template_id: selectedType,
+        title: formData.title,
+        content: formData.content,
+        variables: JSON.parse(formData.variables || '{}'),
+        status: 'draft',
+        version: 1
       });
+      
+      // Generate AI content if needed
+      if (formData.content) {
+        const document = await aiDocumentService.generateDocument(
+          selectedType,
+          {
+            clientName: cases.find(c => c.id === selectedCase)?.title || '',
+            caseNumber: selectedCase,
+            details: formData.content,
+            urgency: formData.urgency
+          }
+        );
+        setGeneratedDocument(document);
+      }
+      
+      // Reload recent documents
+      await loadData();
+      
+      toast({
+        title: "Documento creado",
+        description: "El documento se ha creado exitosamente"
+      });
+      
+      // Reset form
+      setFormData({
+        title: "",
+        content: "",
+        variables: "{}",
+        urgency: "normal"
+      });
+      setSelectedType("");
+      setSelectedCase("");
     } catch (error) {
       console.error('Error generando documento:', error);
       toast({
@@ -159,43 +221,67 @@ export const DocumentAutomation = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="document-type">Tipo de Documento *</Label>
-                <Select value={selectedType} onValueChange={setSelectedType}>
+                <Label htmlFor="case-select">Caso *</Label>
+                <Select value={selectedCase} onValueChange={setSelectedCase}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un tipo de documento" />
+                    <SelectValue placeholder="Selecciona un caso" />
                   </SelectTrigger>
                   <SelectContent>
-                    {documentTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        <div>
-                          <div className="font-medium">{type.name}</div>
-                          <div className="text-sm text-muted-foreground">{type.description}</div>
-                        </div>
+                    {cases.map((case_) => (
+                      <SelectItem key={case_.id} value={case_.id}>
+                        {case_.title} - {case_.case_number}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="client-name">Nombre del Cliente *</Label>
-                  <Input
-                    id="client-name"
-                    value={formData.clientName}
-                    onChange={(e) => setFormData({...formData, clientName: e.target.value})}
-                    placeholder="Ej: María García López"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="case-number">Número de Caso</Label>
-                  <Input
-                    id="case-number"
-                    value={formData.caseNumber}
-                    onChange={(e) => setFormData({...formData, caseNumber: e.target.value})}
-                    placeholder="Ej: CIV-2024-001"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="document-type">Plantilla de Documento *</Label>
+                <Select value={selectedType} onValueChange={setSelectedType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona una plantilla" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name} - {template.type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="document-title">Título del Documento *</Label>
+                <Input
+                  id="document-title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  placeholder="Ingresa el título del documento"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="content">Contenido del Documento</Label>
+                <Textarea
+                  id="content"
+                  value={formData.content}
+                  onChange={(e) => setFormData({...formData, content: e.target.value})}
+                  placeholder="Describe el contenido específico que debe incluir el documento..."
+                  rows={4}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="variables">Variables (JSON)</Label>
+                <Textarea
+                  id="variables"
+                  value={formData.variables}
+                  onChange={(e) => setFormData({...formData, variables: e.target.value})}
+                  placeholder='{"variable1": "valor1", "variable2": "valor2"}'
+                  rows={2}
+                />
               </div>
 
               <div className="space-y-2">
@@ -211,17 +297,6 @@ export const DocumentAutomation = () => {
                     <SelectItem value="urgent">Urgente</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="details">Detalles Específicos</Label>
-                <Textarea
-                  id="details"
-                  value={formData.details}
-                  onChange={(e) => setFormData({...formData, details: e.target.value})}
-                  placeholder="Describe los aspectos específicos del documento que necesitas..."
-                  rows={4}
-                />
               </div>
 
               <div className="flex gap-3">
@@ -326,25 +401,51 @@ export const DocumentAutomation = () => {
                 Documentos Recientes
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {recentDocuments.map((doc, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-legal-neutral transition-colors">
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{doc.name}</div>
-                    <div className="text-xs text-muted-foreground">{doc.type} • {doc.date}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {doc.status === "Completado" ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Clock className="h-4 w-4 text-yellow-500" />
-                    )}
-                    <Button size="sm" variant="ghost">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <span className="ml-2">Cargando documentos...</span>
                 </div>
-              ))}
+              ) : (
+                <div className="space-y-3">
+                  {recentDocuments.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      No hay documentos recientes
+                    </p>
+                  ) : (
+                    recentDocuments.map((doc) => (
+                      <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-legal-neutral transition-colors">
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{doc.title}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {doc.status} • {new Date(doc.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {doc.status === "completed" ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Clock className="h-4 w-4 text-yellow-500" />
+                          )}
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => {
+                              toast({
+                                title: "Función en desarrollo",
+                                description: "La descarga de documentos estará disponible pronto"
+                              });
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

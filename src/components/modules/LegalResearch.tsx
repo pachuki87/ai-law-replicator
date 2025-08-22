@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Search, 
   BookOpen, 
@@ -21,12 +24,47 @@ import {
   Tag,
   Share2,
   Database,
-  Loader2
-} from "lucide-react";
-import { unifiedSearchService } from '@/services/unifiedSearchService';
-import { SearchQuery, LegalDocument, SearchResult } from '@/services/legalDatabaseService';
-import legalResearch from "@/assets/legal-research.jpg";
-import { useToast } from "@/components/ui/use-toast";
+  Loader2,
+  Gavel
+} from 'lucide-react';
+import { searchService } from '@/services/searchService';
+import legalResearch from '@/assets/legal-research.jpg';
+import type { Database } from '@/types/database';
+
+type SearchEntry = Database['public']['Tables']['search_history']['Row'];
+type SavedSearch = Database['public']['Tables']['saved_searches']['Row'];
+type LegalDocument = {
+  id: number;
+  title: string;
+  court: string;
+  date: string;
+  reference: string;
+  summary?: string;
+  relevance: number;
+  tags: string[];
+  jurisdiction: string;
+  url?: string;
+  source?: string;
+};
+type SearchResult = {
+  documents: LegalDocument[];
+  totalResults: number;
+  searchTime: number;
+  source: string;
+};
+type SearchQuery = {
+  query: string;
+  filters: {
+    jurisdiction?: string;
+    dateRange?: string;
+    court?: string;
+    documentType?: string;
+  };
+  operators: {
+    exact: boolean;
+    synonyms: boolean;
+  };
+};
 
 const searchResults = [
   {
@@ -79,6 +117,7 @@ export const LegalResearch = () => {
   const [activeTab, setActiveTab] = useState("jurisprudence");
   const [searchResults, setSearchResults] = useState<SearchResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [searchType, setSearchType] = useState<'all' | 'public' | 'commercial'>('all');
   const [availableDatabases, setAvailableDatabases] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -88,13 +127,46 @@ export const LegalResearch = () => {
     court: '',
     documentType: ''
   });
+  const [searchHistory, setSearchHistory] = useState<SearchEntry[]>([]);
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [recentSearches, setRecentSearches] = useState<SearchEntry[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Cargar bases de datos disponibles al montar el componente
-    const databases = unifiedSearchService.getAvailableDatabases();
-    setAvailableDatabases(databases);
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    try {
+      setIsLoadingData(true);
+      
+      // Cargar historial de búsquedas recientes
+      const recentHistory = await searchService.getRecentSearches(10);
+      setRecentSearches(recentHistory);
+      
+      // Cargar búsquedas guardadas
+      const saved = await searchService.getSavedSearches();
+      setSavedSearches(saved);
+      
+      // Cargar consultas populares como sugerencias
+      const popular = await searchService.getPopularQueries(5);
+      setSuggestions(popular.map(p => p.query));
+      
+      // Cargar bases de datos disponibles al montar el componente
+      const databases = unifiedSearchService.getAvailableDatabases();
+      setAvailableDatabases(databases);
+      
+    } catch (error) {
+      console.error('Error loading search data:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los datos de búsqueda",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
 
   useEffect(() => {
     // Obtener sugerencias cuando cambia la consulta
@@ -126,26 +198,31 @@ export const LegalResearch = () => {
         }
       };
 
-      let result: SearchResult;
+      // Realizar búsqueda (simulada por ahora)
+      const mockResult: SearchResult = {
+        documents: searchResults.slice(0, 5), // Usar datos mock por ahora
+        totalResults: searchResults.length,
+        searchTime: Math.floor(Math.random() * 500) + 100,
+        source: searchType
+      };
       
-      switch (searchType) {
-        case 'public':
-          result = await unifiedSearchService.searchPublicOnly(query);
-          break;
-        case 'commercial':
-          result = await unifiedSearchService.searchCommercialOnly(query);
-          break;
-        default: {
-          const searchData = await unifiedSearchService.searchAll(query);
-          result = searchData.combined;
-          break;
-        }
-      }
-
-      setSearchResults(result);
+      setSearchResults(mockResult);
+      
+      // Guardar en historial de búsquedas
+      await searchService.saveSearch({
+        query: searchQuery,
+        search_type: searchType,
+        filters: selectedFilters,
+        results_count: mockResult.totalResults
+      });
+      
+      // Recargar búsquedas recientes
+      const recentHistory = await searchService.getRecentSearches(10);
+      setRecentSearches(recentHistory);
+      
       toast({
         title: "Búsqueda completada",
-        description: `Se encontraron ${result.totalResults} resultados en ${result.searchTime}ms`
+        description: `Se encontraron ${mockResult.totalResults} resultados en ${mockResult.searchTime}ms`
       });
     } catch (error) {
       console.error('Error en la búsqueda:', error);
@@ -158,6 +235,46 @@ export const LegalResearch = () => {
       setIsLoading(false);
       setIsSearching(false);
     }
+  };
+
+  const handleSaveSearch = async () => {
+    if (!searchQuery.trim()) return;
+    
+    try {
+      await searchService.saveSearchQuery({
+        name: `Búsqueda: ${searchQuery.substring(0, 50)}...`,
+        query: searchQuery,
+        filters: selectedFilters,
+        search_type: searchType
+      });
+      
+      // Recargar búsquedas guardadas
+      const saved = await searchService.getSavedSearches();
+      setSavedSearches(saved);
+      
+      toast({
+        title: "Búsqueda guardada",
+        description: "La búsqueda se ha guardado correctamente"
+      });
+    } catch (error) {
+      console.error('Error saving search:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo guardar la búsqueda",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleLoadSavedSearch = async (savedSearch: SavedSearch) => {
+    setSearchQuery(savedSearch.query);
+    setSelectedFilters(savedSearch.filters as any);
+    setSearchType(savedSearch.search_type);
+    
+    toast({
+      title: "Búsqueda cargada",
+      description: `Se ha cargado la búsqueda: ${savedSearch.name}`
+    });
   };
 
   const handleQuickSearch = (query: string) => {
@@ -344,6 +461,14 @@ export const LegalResearch = () => {
                   </>
                 )}
               </Button>
+              <Button 
+                onClick={handleSaveSearch} 
+                disabled={!searchQuery.trim()} 
+                variant="outline"
+              >
+                <Star className="mr-2 h-4 w-4" />
+                Guardar
+              </Button>
             </div>
 
             {/* Sugerencias de búsqueda */}
@@ -437,6 +562,64 @@ export const LegalResearch = () => {
                 </Badge>
               ))}
             </div>
+            
+            {/* Búsquedas recientes */}
+            {recentSearches.length > 0 && (
+              <div className="mt-4">
+                <Label className="text-sm font-medium">Búsquedas recientes:</Label>
+                <div className="space-y-2 mt-2">
+                  {recentSearches.slice(0, 5).map((search) => (
+                    <div key={search.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{search.query}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {search.results_count} resultados • {new Date(search.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSearchQuery(search.query);
+                          setSearchType(search.search_type);
+                          if (search.filters) {
+                            setSelectedFilters(search.filters as any);
+                          }
+                        }}
+                      >
+                        <Search className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Búsquedas guardadas */}
+            {savedSearches.length > 0 && (
+              <div className="mt-4">
+                <Label className="text-sm font-medium">Búsquedas guardadas:</Label>
+                <div className="space-y-2 mt-2">
+                  {savedSearches.slice(0, 3).map((search) => (
+                    <div key={search.id} className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{search.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {search.query} • {new Date(search.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleLoadSavedSearch(search)}
+                      >
+                        <BookOpen className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Información de bases de datos disponibles */}
             {availableDatabases.length > 0 && (
@@ -495,15 +678,45 @@ export const LegalResearch = () => {
             </TabsList>
             
             <TabsContent value="jurisprudence" className="space-y-4">
-              {renderSearchResults()}
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <Loader2 className="mx-auto h-12 w-12 text-muted-foreground mb-4 animate-spin" />
+                  <h3 className="text-lg font-semibold mb-2">Buscando...</h3>
+                  <p className="text-muted-foreground">
+                    Procesando tu consulta en las bases de datos jurídicas
+                  </p>
+                </div>
+              ) : (
+                renderSearchResults()
+              )}
             </TabsContent>
             
             <TabsContent value="legislation" className="space-y-4">
-              {renderSearchResults()}
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <Loader2 className="mx-auto h-12 w-12 text-muted-foreground mb-4 animate-spin" />
+                  <h3 className="text-lg font-semibold mb-2">Buscando...</h3>
+                  <p className="text-muted-foreground">
+                    Procesando tu consulta en las bases de datos jurídicas
+                  </p>
+                </div>
+              ) : (
+                renderSearchResults()
+              )}
             </TabsContent>
             
             <TabsContent value="doctrine" className="space-y-4">
-              {renderSearchResults()}
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <Loader2 className="mx-auto h-12 w-12 text-muted-foreground mb-4 animate-spin" />
+                  <h3 className="text-lg font-semibold mb-2">Buscando...</h3>
+                  <p className="text-muted-foreground">
+                    Procesando tu consulta en las bases de datos jurídicas
+                  </p>
+                </div>
+              ) : (
+                renderSearchResults()
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>

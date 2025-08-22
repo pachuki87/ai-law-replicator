@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   MessageSquare, 
   Send, 
@@ -13,21 +15,24 @@ import {
   Lightbulb,
   FileText,
   Scale,
-  Clock
+  Clock,
+  Sparkles,
+  Zap,
+  Loader2,
+  Plus
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { aiService } from "@/services/aiService";
+import caseService from "@/services/caseService";
+import type { Database } from "@/types/database";
+
+type AIConversation = Database['public']['Tables']['ai_conversations']['Row'];
+type AIMessage = Database['public']['Tables']['ai_messages']['Row'];
+type Case = Database['public']['Tables']['cases']['Row'];
 
 // Initialize Google AI
-const GOOGLE_API_KEY = import.meta.env.GEMINI_API_KEY;
+const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_GEMINI_API_KEY;
 const genAI = GOOGLE_API_KEY ? new GoogleGenerativeAI(GOOGLE_API_KEY) : null;
-
-interface Message {
-  id: string;
-  content: string;
-  sender: 'user' | 'ai';
-  timestamp: Date;
-  type?: 'legal-advice' | 'document-help' | 'research' | 'general';
-}
 
 const quickQuestions = [
   "¿Cómo redacto una demanda por incumplimiento contractual?",
@@ -38,111 +43,165 @@ const quickQuestions = [
   "¿Qué es el procedimiento monitorio?"
 ];
 
-const initialMessages: Message[] = [
-  {
-    id: '1',
-    content: '¡Hola! Soy tu asistente jurídico de IA. Puedo ayudarte con consultas legales, redacción de documentos, investigación jurídica y análisis de casos. ¿En qué puedo asistirte hoy?',
-    sender: 'ai',
-    timestamp: new Date(),
-    type: 'general'
-  }
-];
-
 export const AIAssistant = () => {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [conversations, setConversations] = useState<AIConversation[]>([]);
+  const [currentConversation, setCurrentConversation] = useState<string | null>(null);
+  const [messages, setMessages] = useState<AIMessage[]>([]);
+  const [cases, setCases] = useState<Case[]>([]);
+  const [selectedCase, setSelectedCase] = useState<string | null>(null);
   const [inputMessage, setInputMessage] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [conversationType, setConversationType] = useState<'general' | 'case_analysis' | 'legal_research' | 'document_review'>('general');
   const { toast } = useToast();
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
+  // Load data on component mount
+  useEffect(() => {
+    loadData();
+  }, []);
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: inputMessage,
-      sender: 'user',
-      timestamp: new Date(),
-      type: 'general'
-    };
+  // Load messages when conversation changes
+  useEffect(() => {
+    if (currentConversation) {
+      loadMessages(currentConversation);
+    } else {
+      setMessages([]);
+    }
+  }, [currentConversation]);
 
-    setMessages(prev => [...prev, userMessage]);
-    const currentInput = inputMessage;
-    setInputMessage("");
-    setIsTyping(true);
-
-    const maxRetries = 3;
-    let retryCount = 0;
-
-    const tryGetResponse = async (): Promise<string> => {
-      try {
-        if (!genAI) {
-          throw new Error('Google API key not configured');
-        }
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        
-        const prompt = `Eres un asistente jurídico especializado en derecho español. Responde de manera profesional y precisa a la siguiente consulta legal: ${currentInput}
-        
-        Proporciona respuestas estructuradas, cita la normativa aplicable cuando sea relevante, y ofrece consejos prácticos. Si la consulta requiere asesoramiento específico, recomienda consultar con un abogado especializado.`;
-        
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        return response.text();
-      } catch (error: unknown) {
-        const errorObj = error as { status?: number };
-        if (errorObj.status === 503 && retryCount < maxRetries) {
-          retryCount++;
-          const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff
-          await new Promise(resolve => setTimeout(resolve, delay));
-          return tryGetResponse();
-        }
-        throw error;
-      }
-    };
-
+  const loadData = async () => {
     try {
-      const text = await tryGetResponse();
-
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        content: text,
-        sender: 'ai',
-        timestamp: new Date(),
-        type: detectMessageType(currentInput)
-      };
-      
-      setMessages(prev => [...prev, aiResponse]);
-    } catch (error: unknown) {
-      console.error('Error getting AI response:', error);
-      
-      let errorMessage = "Disculpa, no pude procesar tu consulta en este momento.";
-      const errorObj = error as { status?: number };
-      
-      if (errorObj.status === 503) {
-        errorMessage = "El servicio de IA está temporalmente sobrecargado. Inténtalo de nuevo en unos segundos.";
-      } else if (errorObj.status === 429) {
-        errorMessage = "Se ha alcanzado el límite de consultas. Espera un momento antes de intentar de nuevo.";
-      } else if (errorObj.status === 401) {
-        errorMessage = "Error de autenticación con la API. Verifica la configuración.";
-      }
-      
+      setIsLoadingData(true);
+      const [conversationsData, casesData] = await Promise.all([
+        aiService.getConversations(),
+        caseService.getCases()
+      ]);
+      setConversations(conversationsData);
+      setCases(casesData);
+    } catch (error) {
+      console.error('Error loading data:', error);
       toast({
-        title: "Error de IA",
-        description: errorMessage,
+        title: "Error",
+        description: "Error al cargar los datos",
         variant: "destructive"
       });
-      
-      const errorResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        content: errorMessage + " Por favor, inténtalo de nuevo.",
-        sender: 'ai',
-        timestamp: new Date(),
-        type: 'general'
-      };
-      
-      setMessages(prev => [...prev, errorResponse]);
     } finally {
-      setIsTyping(false);
+      setIsLoadingData(false);
     }
+  };
+
+  const loadMessages = async (conversationId: string) => {
+    try {
+      const messagesData = await aiService.getConversationMessages(conversationId);
+      setMessages(messagesData);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      toast({
+        title: "Error",
+        description: "Error al cargar los mensajes",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const createNewConversation = async () => {
+    try {
+      const newConversation = await aiService.createConversation({
+        title: `Nueva conversación - ${new Date().toLocaleDateString()}`,
+        type: conversationType,
+        case_id: selectedCase
+      });
+      setConversations([newConversation, ...conversations]);
+      setCurrentConversation(newConversation.id);
+      toast({
+        title: "Conversación creada",
+        description: "Nueva conversación iniciada"
+      });
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      toast({
+        title: "Error",
+        description: "Error al crear la conversación",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || !currentConversation) {
+      if (!currentConversation) {
+        toast({
+          title: "Error",
+          description: "Selecciona o crea una conversación primero",
+          variant: "destructive"
+        });
+      }
+      return;
+    }
+
+    const messageContent = inputMessage;
+    setInputMessage("");
+    setIsLoading(true);
+
+    try {
+      // Save user message
+      const userMessage = await aiService.addMessage(currentConversation, {
+        content: messageContent,
+        role: 'user',
+        message_type: 'text'
+      });
+
+      // Update messages state
+      setMessages(prev => [...prev, userMessage]);
+
+      // Generate AI response
+      if (!genAI) {
+        throw new Error('Google AI no está configurado');
+      }
+
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      
+      // Legal context for the prompt
+      const legalContext = `Eres un asistente jurídico especializado en derecho español. 
+      Proporciona respuestas precisas, profesionales y basadas en principios legales. 
+      Si la consulta requiere asesoría legal específica, recomienda consultar con un abogado.
+      Tipo de conversación: ${conversationType}
+      ${selectedCase ? `Caso relacionado: ${cases.find(c => c.id === selectedCase)?.title}` : ''}
+      
+      Consulta del usuario: ${messageContent}`;
+
+      const result = await model.generateContent(legalContext);
+      const response = await result.response;
+      const aiResponse = response.text();
+
+      // Save AI response
+      const aiMessage = await aiService.addMessage(currentConversation, {
+        content: aiResponse,
+        role: 'assistant',
+        message_type: 'text'
+      });
+
+      // Update messages state
+      setMessages(prev => [...prev, aiMessage]);
+
+    } catch (error) {
+      console.error('Error al generar respuesta:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo generar una respuesta. Intenta nuevamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleQuickQuestion = async (question: string) => {
+    setInputMessage(question);
+    // Auto-send the quick question
+    setTimeout(() => {
+      handleSendMessage();
+    }, 100);
   };
 
   const generateAIResponse = (query: string): string => {
@@ -212,11 +271,73 @@ export const AIAssistant = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-legal-secondary to-legal-primary text-primary-foreground rounded-lg p-8">
-        <h1 className="text-3xl font-bold mb-2">Asistente Jurídico IA</h1>
-        <p className="text-primary-foreground/90">
-          Tu asesor legal inteligente disponible 24/7
+      <div className="text-center space-y-2">
+        <div className="flex items-center justify-center gap-2">
+          <Bot className="h-8 w-8 text-legal-primary" />
+          <h1 className="text-3xl font-bold text-legal-dark">Asistente Jurídico IA</h1>
+          <Sparkles className="h-6 w-6 text-yellow-500" />
+        </div>
+        <p className="text-legal-muted max-w-2xl mx-auto">
+          Tu asistente inteligente para consultas legales, redacción de documentos y análisis jurídico
         </p>
+      </div>
+
+      {/* Controls */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label className="text-sm font-medium mb-2 block">Tipo de Conversación</label>
+          <Select value={conversationType} onValueChange={(value: any) => setConversationType(value)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="general">General</SelectItem>
+              <SelectItem value="case_analysis">Análisis de Caso</SelectItem>
+              <SelectItem value="legal_research">Investigación Legal</SelectItem>
+              <SelectItem value="document_review">Revisión de Documentos</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div>
+          <label className="text-sm font-medium mb-2 block">Caso (Opcional)</label>
+          <Select value={selectedCase || ""} onValueChange={setSelectedCase}>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar caso" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Sin caso específico</SelectItem>
+              {cases.map((case_) => (
+                <SelectItem key={case_.id} value={case_.id}>
+                  {case_.title} - {case_.case_number}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div>
+          <label className="text-sm font-medium mb-2 block">Conversación</label>
+          <Select value={currentConversation || ""} onValueChange={setCurrentConversation}>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar conversación" />
+            </SelectTrigger>
+            <SelectContent>
+              {conversations.map((conv) => (
+                <SelectItem key={conv.id} value={conv.id}>
+                  {conv.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="flex items-end">
+          <Button onClick={createNewConversation} className="w-full">
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva Conversación
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -232,64 +353,81 @@ export const AIAssistant = () => {
             <CardContent className="flex-1 flex flex-col">
               {/* Messages */}
               <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex gap-3 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {message.sender === 'ai' && (
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-legal-primary text-primary-foreground">
-                          <Bot className="h-4 w-4" />
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                    
-                    <div className={`max-w-md ${message.sender === 'user' ? 'order-first' : ''}`}>
-                      <div className={`rounded-lg p-3 ${
-                        message.sender === 'user' 
-                          ? 'bg-legal-primary text-primary-foreground ml-auto' 
-                          : 'bg-legal-neutral'
-                      }`}>
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {message.timestamp.toLocaleTimeString()}
-                        {message.type && (
-                          <>
-                            {getMessageTypeIcon(message.type)}
-                            <span>{getMessageTypeBadge(message.type)}</span>
-                          </>
+                {isLoadingData ? (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <span className="ml-2">Cargando conversaciones...</span>
+                  </div>
+                ) : !currentConversation ? (
+                  <div className="flex items-center justify-center h-full text-center">
+                    <div>
+                      <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">
+                        Selecciona una conversación existente o crea una nueva para comenzar
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        {message.role === 'assistant' && (
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-legal-primary text-primary-foreground">
+                              <Bot className="h-4 w-4" />
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                        
+                        <div className={`max-w-md ${message.role === 'user' ? 'order-first' : ''}`}>
+                          <div className={`rounded-lg p-3 ${
+                            message.role === 'user' 
+                              ? 'bg-legal-primary text-primary-foreground ml-auto' 
+                              : 'bg-legal-neutral'
+                          }`}>
+                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {new Date(message.created_at).toLocaleTimeString()}
+                            {message.message_type && (
+                              <Badge variant="secondary" className="text-xs">
+                                {message.message_type}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {message.role === 'user' && (
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-legal-accent">
+                              <User className="h-4 w-4" />
+                            </AvatarFallback>
+                          </Avatar>
                         )}
                       </div>
-                    </div>
-
-                    {message.sender === 'user' && (
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-legal-accent">
-                          <User className="h-4 w-4" />
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                  </div>
-                ))}
-                
-                {isTyping && (
-                  <div className="flex gap-3 justify-start">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-legal-primary text-primary-foreground">
-                        <Bot className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="bg-legal-neutral rounded-lg p-3">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-legal-primary rounded-full animate-bounce" />
-                        <div className="w-2 h-2 bg-legal-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                        <div className="w-2 h-2 bg-legal-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                    ))}
+                    
+                    {isLoading && (
+                      <div className="flex gap-3 justify-start">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-legal-primary text-primary-foreground">
+                            <Bot className="h-4 w-4" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="bg-legal-neutral rounded-lg p-3">
+                          <div className="flex space-x-1">
+                            <div className="w-2 h-2 bg-legal-primary rounded-full animate-bounce" />
+                            <div className="w-2 h-2 bg-legal-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                            <div className="w-2 h-2 bg-legal-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -298,12 +436,21 @@ export const AIAssistant = () => {
                 <Input
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
-                  placeholder="Escribe tu consulta legal aquí..."
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder={currentConversation ? "Escribe tu consulta legal aquí..." : "Selecciona o crea una conversación primero"}
+                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                   className="flex-1"
+                  disabled={isLoading || !currentConversation}
                 />
-                <Button onClick={handleSendMessage} disabled={!inputMessage.trim()} variant="legal">
-                  <Send className="h-4 w-4" />
+                <Button 
+                  onClick={handleSendMessage} 
+                  disabled={isLoading || !inputMessage.trim() || !currentConversation}
+                  variant="legal"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </CardContent>
