@@ -67,13 +67,15 @@ export const DocumentAutomation = () => {
         throw new Error("Tipo de documento no encontrado");
       }
 
-      const document = await aiDocumentService.generateDocument({
-        typeName: selectedDocType.name,
-        clientName: formData.clientName,
-        caseNumber: formData.caseNumber || `AUTO-${Date.now()}`,
-        details: formData.details,
-        urgency: formData.urgency as 'low' | 'normal' | 'high' | 'urgent'
-      });
+      const document = await aiDocumentService.generateDocument(
+        selectedType,
+        {
+          clientName: formData.clientName,
+          caseNumber: formData.caseNumber || `AUTO-${Date.now()}`,
+          details: formData.details,
+          urgency: formData.urgency
+        }
+      );
 
       setGeneratedDocument(document);
       toast({

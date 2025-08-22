@@ -18,7 +18,8 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 
 // Initialize Google AI
-const genAI = new GoogleGenerativeAI("AIzaSyCnA6rpPRXqxoBEsAv-IhR_6oy_Z0iuDoU");
+const GOOGLE_API_KEY = import.meta.env.GEMINI_API_KEY;
+const genAI = GOOGLE_API_KEY ? new GoogleGenerativeAI(GOOGLE_API_KEY) : null;
 
 interface Message {
   id: string;
@@ -74,6 +75,9 @@ export const AIAssistant = () => {
 
     const tryGetResponse = async (): Promise<string> => {
       try {
+        if (!genAI) {
+          throw new Error('Google API key not configured');
+        }
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         
         const prompt = `Eres un asistente jurídico especializado en derecho español. Responde de manera profesional y precisa a la siguiente consulta legal: ${currentInput}

@@ -1,13 +1,13 @@
 // Configuración de APIs usando variables de entorno
-const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+const GEMINI_API_KEY = import.meta.env.GEMINI_API_KEY;
+const OPENAI_API_KEY = import.meta.env.OPENAI_API_KEY;
 
 // Tipos de datos
 export interface DocumentFormData {
   clientName: string;
   caseNumber: string;
   details: string;
-  urgency: 'low' | 'medium' | 'high';
+  urgency: 'low' | 'normal' | 'high' | 'urgent';
   [key: string]: string | number | boolean;
 }
 
@@ -222,7 +222,7 @@ Este es un documento de ejemplo generado para demostrar la funcionalidad del sis
 *Fecha de generación: ${currentDate}*
 *Versión: 1.0*
 
-**NOTA IMPORTANTE:** Este es un documento de ejemplo. Para obtener documentos legales reales generados por IA, configure las variables de entorno VITE_OPENAI_API_KEY o VITE_GOOGLE_API_KEY en su archivo .env
+**NOTA IMPORTANTE:** Este es un documento de ejemplo. Para obtener documentos legales reales generados por IA, configure las variables de entorno OPENAI_API_KEY o GEMINI_API_KEY en su archivo .env
   `;
 }
 
