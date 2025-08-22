@@ -6,7 +6,7 @@ import { DocumentAutomation } from "@/components/modules/DocumentAutomation";
 import { LegalResearch } from "@/components/modules/LegalResearch";
 import { DatabasesDirectory } from "@/components/modules/DatabasesDirectory";
 import { AIAssistant } from "@/components/modules/AIAssistant";
-import { CaseManagement } from "@/components/modules/CaseManagement";
+import CaseManagement from "@/components/modules/CaseManagement";
 import { ResultsPrediction } from "@/components/modules/ResultsPrediction";
 import { Compliance } from "@/components/modules/Compliance";
 

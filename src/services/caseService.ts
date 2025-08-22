@@ -3,7 +3,7 @@ import type {
   Client,
   ClientInsert,
   ClientUpdate,
-  Case,
+  Case as CaseType,
   CaseInsert,
   CaseUpdate,
   CaseActivity,
@@ -11,11 +11,11 @@ import type {
   CaseActivityUpdate
 } from '../types/database'
 
-export interface CaseWithClient extends Case {
+export interface CaseWithClient extends CaseType {
   client?: Client
 }
 
-export interface CaseWithActivities extends Case {
+export interface CaseWithActivities extends CaseType {
   activities: CaseActivity[]
   client?: Client
 }
@@ -116,12 +116,20 @@ class CaseService {
   // ============ CASE OPERATIONS ============
 
   // Create new case
-  async createCase(caseData: Omit<CaseInsert, 'user_id'>): Promise<Case | null> {
+  async createCase(caseData: Omit<CaseInsert, 'user_id'>): Promise<CaseType | null> {
     try {
+      // Generate automatic case number if not provided
+      const caseNumber = caseData.case_number || `CASE-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`
+      
+      // Set open_date to current date if not provided
+      const openDate = caseData.open_date || new Date().toISOString().split('T')[0]
+      
       const { data, error } = await supabase
         .from('cases')
         .insert({
           ...caseData,
+          case_number: caseNumber,
+          open_date: openDate,
           user_id: null // No auth mode
         })
         .select()
@@ -197,7 +205,7 @@ class CaseService {
   }
 
   // Update case
-  async updateCase(caseId: string, updates: CaseUpdate): Promise<Case | null> {
+  async updateCase(caseId: string, updates: CaseUpdate): Promise<CaseType | null> {
     try {
       const { data, error } = await supabase
         .from('cases')
@@ -339,7 +347,7 @@ class CaseService {
   }
 
   // Get cases by client
-  async getCasesByClient(clientId: string): Promise<Case[]> {
+  async getCasesByClient(clientId: string): Promise<CaseType[]> {
     try {
       const { data, error } = await supabase
         .from('cases')

@@ -142,7 +142,7 @@ export interface Database {
           case_number: string | null
           start_date: string | null
           end_date: string | null
-          estimated_value: number | null
+          case_value: number | null
           notes: string | null
           created_at: string
           updated_at: string
@@ -160,7 +160,7 @@ export interface Database {
           case_number?: string | null
           start_date?: string | null
           end_date?: string | null
-          estimated_value?: number | null
+          case_value?: number | null
           notes?: string | null
           created_at?: string
           updated_at?: string
@@ -178,7 +178,7 @@ export interface Database {
           case_number?: string | null
           start_date?: string | null
           end_date?: string | null
-          estimated_value?: number | null
+          case_value?: number | null
           notes?: string | null
           created_at?: string
           updated_at?: string
@@ -563,6 +563,41 @@ export interface Database {
           updated_at?: string
         }
       }
+      case_documents: {
+        Row: {
+          id: string
+          case_id: string
+          file_name: string
+          file_path: string
+          file_size: number
+          mime_type: string
+          uploaded_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          case_id: string
+          file_name: string
+          file_path: string
+          file_size: number
+          mime_type?: string
+          uploaded_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          case_id?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          mime_type?: string
+          uploaded_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
       prediction_factors: {
         Row: {
           id: string
@@ -622,25 +657,28 @@ export type AIConversation = Database['public']['Tables']['ai_conversations']['R
 export type AIMessage = Database['public']['Tables']['ai_messages']['Row']
 export type ComplianceIssue = Database['public']['Tables']['compliance_issues']['Row']
 export type CasePrediction = Database['public']['Tables']['case_predictions']['Row']
+export type CaseDocument = Database['public']['Tables']['case_documents']['Row']
 
 // Insert types
-export type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
 export type ClientInsert = Database['public']['Tables']['clients']['Insert']
 export type CaseInsert = Database['public']['Tables']['cases']['Insert']
 export type CaseActivityInsert = Database['public']['Tables']['case_activities']['Insert']
 export type GeneratedDocumentInsert = Database['public']['Tables']['generated_documents']['Insert']
+export type DocumentTemplateInsert = Database['public']['Tables']['document_templates']['Insert']
 export type AIConversationInsert = Database['public']['Tables']['ai_conversations']['Insert']
 export type AIMessageInsert = Database['public']['Tables']['ai_messages']['Insert']
 export type ComplianceIssueInsert = Database['public']['Tables']['compliance_issues']['Insert']
 export type CasePredictionInsert = Database['public']['Tables']['case_predictions']['Insert']
+export type CaseDocumentInsert = Database['public']['Tables']['case_documents']['Insert']
 
 // Update types
-export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
 export type ClientUpdate = Database['public']['Tables']['clients']['Update']
 export type CaseUpdate = Database['public']['Tables']['cases']['Update']
 export type CaseActivityUpdate = Database['public']['Tables']['case_activities']['Update']
 export type GeneratedDocumentUpdate = Database['public']['Tables']['generated_documents']['Update']
+export type DocumentTemplateUpdate = Database['public']['Tables']['document_templates']['Update']
 export type AIConversationUpdate = Database['public']['Tables']['ai_conversations']['Update']
 export type AIMessageUpdate = Database['public']['Tables']['ai_messages']['Update']
 export type ComplianceIssueUpdate = Database['public']['Tables']['compliance_issues']['Update']
 export type CasePredictionUpdate = Database['public']['Tables']['case_predictions']['Update']
+export type CaseDocumentUpdate = Database['public']['Tables']['case_documents']['Update']

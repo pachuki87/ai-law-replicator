@@ -24,11 +24,10 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { aiService } from "@/services/aiService";
 import caseService from "@/services/caseService";
-import type { Database } from "@/types/database";
+import { Database, Case } from "@/types/database";
 
 type AIConversation = Database['public']['Tables']['ai_conversations']['Row'];
 type AIMessage = Database['public']['Tables']['ai_messages']['Row'];
-type Case = Database['public']['Tables']['cases']['Row'];
 
 // Initialize Google AI
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_GEMINI_API_KEY;

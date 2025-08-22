@@ -23,10 +23,9 @@ import { documentDownloadService } from "@/services/documentDownloadService";
 import { documentService } from "@/services/documentService";
 import caseService from "@/services/caseService";
 import { toast } from "sonner";
-import type { Database } from "@/types/database";
+import { Database, Case } from "@/types/database";
 
 type GeneratedDoc = Database['public']['Tables']['generated_documents']['Row'];
-type Case = Database['public']['Tables']['cases']['Row'];
 type DocumentTemplate = Database['public']['Tables']['document_templates']['Row'];
 
 const documentTypes = [

@@ -115,9 +115,39 @@ src/
 
 Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
 
-## 🆘 Soporte
+## 🆘 Soporte y Solución de Problemas
 
-Si tienes problemas o preguntas:
+### Problema: La aplicación web no carga o no funciona correctamente
+
+**⚠️ PASOS IMPORTANTES - NO OLVIDAR:**
+
+Si la aplicación no está funcionando o no se puede acceder a ella, sigue estos pasos en orden:
+
+1. **Instalar dependencias**
+   ```bash
+   npm install
+   ```
+
+2. **Iniciar el servidor de desarrollo**
+   ```bash
+   npm run dev
+   ```
+
+3. **Verificar que el servidor esté corriendo**
+   - La aplicación debería estar disponible en `http://localhost:3001/`
+   - Verifica que no haya errores en la consola
+   - Asegúrate de que el puerto 3001 no esté siendo usado por otra aplicación
+
+4. **Si persisten los problemas**
+   - Elimina la carpeta `node_modules` y el archivo `package-lock.json`
+   - Ejecuta `npm install` nuevamente
+   - Reinicia el servidor con `npm run dev`
+
+**Nota**: Estos pasos son fundamentales cuando la aplicación no responde. Siempre ejecutar `npm install` y `npm run dev` cuando haya problemas de carga.
+
+### Otros problemas comunes
+
+Si tienes otros problemas o preguntas:
 
 1. Revisa la documentación
 2. Busca en los issues existentes
