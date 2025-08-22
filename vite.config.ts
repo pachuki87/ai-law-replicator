@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     rollupOptions: {
-      external: ['openai', '@google/generative-ai'],
+      // Removed external dependencies to allow proper bundling
     },
   },
 }));
