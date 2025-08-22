@@ -1,6 +1,6 @@
 // Configuración de APIs usando variables de entorno
-const GEMINI_API_KEY = import.meta.env.GEMINI_API_KEY;
-const OPENAI_API_KEY = import.meta.env.OPENAI_API_KEY;
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
+const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.OPENAI_API_KEY;
 
 // Tipos de datos
 export interface DocumentFormData {
@@ -291,24 +291,85 @@ class AIDocumentService {
     };
   }
 
-  // Generar documento con Gemini (implementación futura)
+  // Generar documento con Gemini
   private async generateWithGemini(
     documentType: string,
     formData: DocumentFormData
   ): Promise<string> {
-    // Por ahora, usar contenido mock
-    // En el futuro, aquí se implementará la llamada real a Gemini
-    throw new Error('Gemini API no implementada aún');
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key no configurada');
+    }
+
+    try {
+      const { GoogleGenerativeAI } = await import('@google/generative-ai');
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+      const prompt = documentPrompts[documentType as keyof typeof documentPrompts]?.(formData) || 
+        `Genera un documento legal de tipo ${documentType} con la siguiente información:\n\nCliente: ${formData.clientName}\nNúmero de caso: ${formData.caseNumber}\nDetalles: ${formData.details}\nUrgencia: ${formData.urgency}`;
+
+      const result = await model.generateContent({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 8192,
+        },
+      });
+
+      const response = await result.response;
+      return response.text();
+    } catch (error) {
+      console.error('Error al generar documento con Gemini:', error);
+      throw new Error('Error al comunicarse con la API de Gemini');
+    }
   }
 
-  // Generar documento con OpenAI (implementación futura)
+  // Generar documento con OpenAI
   private async generateWithOpenAI(
     documentType: string,
     formData: DocumentFormData
   ): Promise<string> {
-    // Por ahora, usar contenido mock
-    // En el futuro, aquí se implementará la llamada real a OpenAI
-    throw new Error('OpenAI API no implementada aún');
+    if (!OPENAI_API_KEY) {
+      throw new Error('OpenAI API key no configurada');
+    }
+
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'Eres un experto abogado especializado en la redacción de documentos legales profesionales en español. Genera documentos bien estructurados, formales y completos.'
+            },
+            {
+              role: 'user',
+              content: documentPrompts[documentType as keyof typeof documentPrompts]?.(formData) || 
+                `Genera un documento legal de tipo ${documentType} con la siguiente información:\n\nCliente: ${formData.clientName}\nNúmero de caso: ${formData.caseNumber}\nDetalles: ${formData.details}\nUrgencia: ${formData.urgency}`
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 4000,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.choices[0]?.message?.content || 'Error: No se pudo generar el contenido';
+    } catch (error) {
+      console.error('Error al generar documento con OpenAI:', error);
+      throw new Error('Error al comunicarse con la API de OpenAI');
+    }
   }
 
   // Obtener tipos de documento disponibles

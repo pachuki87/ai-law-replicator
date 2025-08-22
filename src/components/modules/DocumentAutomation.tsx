@@ -99,19 +99,7 @@ export const DocumentAutomation = () => {
     
     setIsDownloading(true);
     try {
-      const selectedDocType = documentTypes.find(type => type.id === selectedType);
-      const fileName = `${selectedDocType?.name || 'Documento'}_${formData.clientName || 'Cliente'}_${new Date().toISOString().split('T')[0]}`;
-      
-      await documentDownloadService.downloadAsPDF(
-        generatedDocument.content,
-        fileName,
-        {
-          title: selectedDocType?.name || 'Documento Legal',
-          clientName: formData.clientName,
-          caseNumber: formData.caseNumber,
-          date: new Date().toLocaleDateString('es-ES')
-        }
-      );
+      await documentDownloadService.downloadAsPDF(generatedDocument);
       
       toast.success('Documento PDF descargado exitosamente');
     } catch (error) {
@@ -127,19 +115,7 @@ export const DocumentAutomation = () => {
     
     setIsDownloading(true);
     try {
-      const selectedDocType = documentTypes.find(type => type.id === selectedType);
-      const fileName = `${selectedDocType?.name || 'Documento'}_${formData.clientName || 'Cliente'}_${new Date().toISOString().split('T')[0]}`;
-      
-      await documentDownloadService.downloadAsWord(
-        generatedDocument.content,
-        fileName,
-        {
-          title: selectedDocType?.name || 'Documento Legal',
-          clientName: formData.clientName,
-          caseNumber: formData.caseNumber,
-          date: new Date().toLocaleDateString('es-ES')
-        }
-      );
+      await documentDownloadService.downloadAsWord(generatedDocument);
       
       toast.success('Documento Word descargado exitosamente');
     } catch (error) {
