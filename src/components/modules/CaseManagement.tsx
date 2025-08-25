@@ -78,13 +78,58 @@ const CaseManagement = () => {
       setClients(clientsData);
     } catch (error) {
       console.error('Error loading data:', error);
-      toast({
-        title: "Error",
-        description: "Error al cargar los datos",
-        variant: "destructive"
-      });
+      toast.error("Error al cargar los datos");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCreateClient = async () => {
+    try {
+      if (!newClient.name || !newClient.email) {
+        toast.error("Por favor completa los campos obligatorios");
+        return;
+      }
+
+      await caseService.createClient(newClient);
+      toast.success("Cliente creado exitosamente");
+      setShowNewClientForm(false);
+      setNewClient({
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+        company: ""
+      });
+      loadData();
+    } catch (error) {
+      console.error('Error creating client:', error);
+      toast.error("Error al crear el cliente");
+    }
+  };
+
+  const handleCreateCase = async () => {
+    try {
+      if (!newCase.title || !newCase.case_type || !newCase.client_id) {
+        toast.error("Por favor completa los campos obligatorios");
+        return;
+      }
+
+      await caseService.createCase(newCase);
+      toast.success("Caso creado exitosamente");
+      setShowNewCaseForm(false);
+      setNewCase({
+        title: "",
+        description: "",
+        case_type: "",
+        priority: "medium",
+        client_id: "",
+        case_value: ""
+      });
+      loadData();
+    } catch (error) {
+      console.error('Error creating case:', error);
+      toast.error("Error al crear el caso");
     }
   };
 
@@ -439,6 +484,164 @@ const CaseManagement = () => {
               </div>
             </>
           )}
+)})
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Nuevo Cliente */}
+      <Dialog open={showNewClientForm} onOpenChange={setShowNewClientForm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nuevo Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="client-name">Nombre *</Label>
+              <Input
+                id="client-name"
+                value={newClient.name}
+                onChange={(e) => setNewClient({...newClient, name: e.target.value})}
+                placeholder="Nombre completo del cliente"
+              />
+            </div>
+            <div>
+              <Label htmlFor="client-email">Email *</Label>
+              <Input
+                id="client-email"
+                type="email"
+                value={newClient.email}
+                onChange={(e) => setNewClient({...newClient, email: e.target.value})}
+                placeholder="correo@ejemplo.com"
+              />
+            </div>
+            <div>
+              <Label htmlFor="client-phone">Teléfono</Label>
+              <Input
+                id="client-phone"
+                value={newClient.phone}
+                onChange={(e) => setNewClient({...newClient, phone: e.target.value})}
+                placeholder="Número de teléfono"
+              />
+            </div>
+            <div>
+              <Label htmlFor="client-company">Empresa</Label>
+              <Input
+                id="client-company"
+                value={newClient.company}
+                onChange={(e) => setNewClient({...newClient, company: e.target.value})}
+                placeholder="Nombre de la empresa"
+              />
+            </div>
+            <div>
+              <Label htmlFor="client-address">Dirección</Label>
+              <Input
+                id="client-address"
+                value={newClient.address}
+                onChange={(e) => setNewClient({...newClient, address: e.target.value})}
+                placeholder="Dirección completa"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowNewClientForm(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleCreateClient}>
+                Crear Cliente
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Nuevo Caso */}
+      <Dialog open={showNewCaseForm} onOpenChange={setShowNewCaseForm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nuevo Caso</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="case-title">Título del Caso *</Label>
+              <Input
+                id="case-title"
+                value={newCase.title}
+                onChange={(e) => setNewCase({...newCase, title: e.target.value})}
+                placeholder="Título descriptivo del caso"
+              />
+            </div>
+            <div>
+              <Label htmlFor="case-type">Tipo de Caso *</Label>
+              <Select value={newCase.case_type} onValueChange={(value) => setNewCase({...newCase, case_type: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona el tipo de caso" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="civil">Civil</SelectItem>
+                  <SelectItem value="penal">Penal</SelectItem>
+                  <SelectItem value="laboral">Laboral</SelectItem>
+                  <SelectItem value="mercantil">Mercantil</SelectItem>
+                  <SelectItem value="administrativo">Administrativo</SelectItem>
+                  <SelectItem value="familiar">Familiar</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="case-client">Cliente *</Label>
+              <Select value={newCase.client_id} onValueChange={(value) => setNewCase({...newCase, client_id: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="case-priority">Prioridad</Label>
+              <Select value={newCase.priority} onValueChange={(value) => setNewCase({...newCase, priority: value as 'low' | 'medium' | 'high' | 'urgent'})}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Baja</SelectItem>
+                  <SelectItem value="medium">Media</SelectItem>
+                  <SelectItem value="high">Alta</SelectItem>
+                  <SelectItem value="urgent">Urgente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="case-value">Valor del Caso</Label>
+              <Input
+                id="case-value"
+                type="number"
+                value={newCase.case_value}
+                onChange={(e) => setNewCase({...newCase, case_value: e.target.value})}
+                placeholder="Valor monetario del caso"
+              />
+            </div>
+            <div>
+              <Label htmlFor="case-description">Descripción</Label>
+              <Input
+                id="case-description"
+                value={newCase.description}
+                onChange={(e) => setNewCase({...newCase, description: e.target.value})}
+                placeholder="Descripción detallada del caso"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowNewCaseForm(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleCreateCase}>
+                Crear Caso
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

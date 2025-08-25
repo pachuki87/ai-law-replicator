@@ -164,5 +164,3 @@ npm run build
 ```
 
 ---
-
-**Desarrollado con ❤️ para la comunidad legal**
