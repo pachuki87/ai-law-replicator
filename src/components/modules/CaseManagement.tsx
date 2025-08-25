@@ -484,7 +484,6 @@ const CaseManagement = () => {
               </div>
             </>
           )}
-)})
         </DialogContent>
       </Dialog>
 
