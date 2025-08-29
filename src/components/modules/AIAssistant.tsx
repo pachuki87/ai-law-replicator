@@ -482,91 +482,93 @@ export const AIAssistant = () => {
             </CardHeader>
             <CardContent className="flex-1 flex flex-col min-w-0 w-full max-w-full">
               {/* Messages */}
-              <div 
+              <ScrollArea 
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto overflow-x-hidden space-y-4 mb-4 px-2 min-w-0 w-full max-w-full"
+                className="flex-1 space-y-4 mb-4 px-2"
               >
-                {isLoadingData ? (
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                    <span className="ml-2">Cargando conversaciones...</span>
-                  </div>
-                ) : !currentConversation ? (
-                  <div className="flex items-center justify-center h-full text-center">
-                    <div>
-                      <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">
-                        Selecciona una conversación existente o crea una nueva para comenzar
-                      </p>
+                <div className="min-w-0 w-full max-w-full">
+                  {isLoadingData ? (
+                    <div className="flex items-center justify-center h-full">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                      <span className="ml-2">Cargando conversaciones...</span>
                     </div>
-                  </div>
-                ) : (
-                  <>
-                    {messages.map((message, index) => (
-                      <div
-                        key={message.id}
-                        ref={(el) => messageRefs.current[index] = el}
-                        className={`flex gap-3 ${message.sender === 'user' ? 'justify-end' : 'justify-start'} ${
-                          selectedMessageIndex === index ? 'bg-yellow-100 dark:bg-yellow-900/20 rounded-lg p-2 -m-2' : ''
-                        }`}
-                      >
-                        {message.sender === 'ai' && (
+                  ) : !currentConversation ? (
+                    <div className="flex items-center justify-center h-full text-center">
+                      <div>
+                        <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">
+                          Selecciona una conversación existente o crea una nueva para comenzar
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {messages.map((message, index) => (
+                        <div
+                          key={message.id}
+                          ref={(el) => messageRefs.current[index] = el}
+                          className={`flex gap-3 ${message.sender === 'user' ? 'justify-end' : 'justify-start'} ${
+                            selectedMessageIndex === index ? 'bg-yellow-100 dark:bg-yellow-900/20 rounded-lg p-2 -m-2' : ''
+                          }`}
+                        >
+                          {message.sender === 'ai' && (
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-legal-primary text-primary-foreground">
+                                <Bot className="h-4 w-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                          
+                          <div className={`max-w-[70%] min-w-0 w-0 flex-1 ${message.sender === 'user' ? 'order-first' : ''}`}>
+                            <div className={`rounded-lg p-3 ${
+                              message.sender === 'user' 
+                                ? 'bg-legal-primary text-primary-foreground ml-auto' 
+                                : 'bg-legal-neutral'
+                            }`}>
+                              <p className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">{message.content}</p>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              {new Date(message.created_at).toLocaleTimeString()}
+                              {message.message_type && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {message.message_type}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          {message.sender === 'user' && (
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-legal-accent">
+                                <User className="h-4 w-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                        </div>
+                      ))}
+                      
+                      {isLoading && (
+                        <div className="flex gap-3 justify-start">
                           <Avatar className="h-8 w-8">
                             <AvatarFallback className="bg-legal-primary text-primary-foreground">
                               <Bot className="h-4 w-4" />
                             </AvatarFallback>
                           </Avatar>
-                        )}
-                        
-                        <div className={`max-w-[70%] min-w-0 w-0 flex-1 ${message.sender === 'user' ? 'order-first' : ''}`}>
-                          <div className={`rounded-lg p-3 ${
-                            message.sender === 'user' 
-                              ? 'bg-legal-primary text-primary-foreground ml-auto' 
-                              : 'bg-legal-neutral'
-                          }`}>
-                            <p className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">{message.content}</p>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            {new Date(message.created_at).toLocaleTimeString()}
-                            {message.message_type && (
-                              <Badge variant="secondary" className="text-xs">
-                                {message.message_type}
-                              </Badge>
-                            )}
+                          <div className="bg-legal-neutral rounded-lg p-3">
+                            <div className="flex space-x-1">
+                              <div className="w-2 h-2 bg-legal-primary rounded-full animate-bounce" />
+                              <div className="w-2 h-2 bg-legal-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                              <div className="w-2 h-2 bg-legal-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                            </div>
                           </div>
                         </div>
-
-                        {message.sender === 'user' && (
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-legal-accent">
-                              <User className="h-4 w-4" />
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                      </div>
-                    ))}
-                    
-                    {isLoading && (
-                      <div className="flex gap-3 justify-start">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-legal-primary text-primary-foreground">
-                            <Bot className="h-4 w-4" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="bg-legal-neutral rounded-lg p-3">
-                          <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-legal-primary rounded-full animate-bounce" />
-                            <div className="w-2 h-2 bg-legal-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                            <div className="w-2 h-2 bg-legal-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                  </>
-                )}
-              </div>
+                      )}
+                      <div ref={messagesEndRef} />
+                    </>
+                  )}
+                </div>
+              </ScrollArea>
 
               {/* Input */}
               <div className="flex gap-2">

@@ -296,7 +296,7 @@ const CaseManagement = () => {
 
       {/* Modal de Detalles del Caso */}
       <Dialog open={selectedCase !== null} onOpenChange={() => setSelectedCase(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby="case-details-description">
           {selectedCase && (
             <>
               <DialogHeader>
@@ -311,6 +311,9 @@ const CaseManagement = () => {
                   >
                     <X className="h-4 w-4" />
                   </Button>
+                </div>
+                <div id="case-details-description" className="sr-only">
+                  Detalles completos del caso incluyendo información del cliente, documentos y opciones de gestión
                 </div>
               </DialogHeader>
               
@@ -489,9 +492,12 @@ const CaseManagement = () => {
 
       {/* Modal de Nuevo Cliente */}
       <Dialog open={showNewClientForm} onOpenChange={setShowNewClientForm}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" aria-describedby="new-client-description">
           <DialogHeader>
             <DialogTitle>Nuevo Cliente</DialogTitle>
+            <div id="new-client-description" className="sr-only">
+              Formulario para crear un nuevo cliente con información de contacto
+            </div>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -554,9 +560,12 @@ const CaseManagement = () => {
 
       {/* Modal de Nuevo Caso */}
       <Dialog open={showNewCaseForm} onOpenChange={setShowNewCaseForm}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" aria-describedby="new-case-description">
           <DialogHeader>
             <DialogTitle>Nuevo Caso</DialogTitle>
+            <div id="new-case-description" className="sr-only">
+              Formulario para crear un nuevo caso legal con detalles y asignación de cliente
+            </div>
           </DialogHeader>
           <div className="space-y-4">
             <div>
