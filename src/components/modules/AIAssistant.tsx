@@ -34,6 +34,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { aiService } from "@/services/aiService";
 import caseService from "@/services/caseService";
+import { pdfProcessingService } from "@/services/pdfProcessingService";
 import { Database, Case } from "@/types/database";
 
 type AIConversation = Database['public']['Tables']['ai_conversations']['Row'];
@@ -231,6 +232,42 @@ export const AIAssistant = () => {
     return messages.length;
   };
 
+  // Función para generar respuesta de IA con reintentos
+  const generateAIResponse = async (prompt: string, maxRetries: number = 3): Promise<string> => {
+    if (!genAI) {
+      throw new Error('Google AI no está configurado');
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        return response.text();
+      } catch (error: any) {
+        console.error(`Intento ${attempt} fallido:`, error);
+        
+        // Si es el último intento, lanzar el error
+        if (attempt === maxRetries) {
+          throw error;
+        }
+        
+        // Si es error de sobrecarga, esperar más tiempo
+        if (error.message?.includes('overloaded') || error.message?.includes('503')) {
+          const waitTime = Math.pow(2, attempt) * 1000; // Backoff exponencial
+          console.log(`API sobrecargada, esperando ${waitTime}ms antes del siguiente intento...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        } else {
+          // Para otros errores, esperar menos tiempo
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    }
+    
+    throw new Error('No se pudo generar respuesta después de varios intentos');
+  };
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || !currentConversation) {
       if (!currentConversation) {
@@ -258,25 +295,39 @@ export const AIAssistant = () => {
       // Update messages state
       setMessages(prev => [...prev, userMessage]);
 
-      // Generate AI response
-      if (!genAI) {
-        throw new Error('Google AI no está configurado');
+      // Search for information in case PDFs if a case is selected
+      let documentContext = '';
+      if (selectedCase) {
+        try {
+          const searchResults = await pdfProcessingService.searchInCaseDocuments(
+            selectedCase, 
+            messageContent
+          );
+          
+          if (searchResults.length > 0) {
+            documentContext = '\n\nInformación encontrada en los documentos del caso:\n';
+            searchResults.slice(0, 3).forEach((result, index) => {
+              documentContext += `\n📄 **${result.fileName}**:\n${result.matchedText}\n`;
+            });
+            documentContext += '\n---\n';
+          }
+        } catch (error) {
+          console.error('Error searching in documents:', error);
+        }
       }
 
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      
       // Legal context for the prompt
       const legalContext = `Eres un asistente jurídico especializado en derecho español. 
       Proporciona respuestas precisas, profesionales y basadas en principios legales. 
       Si la consulta requiere asesoría legal específica, recomienda consultar con un abogado.
       Tipo de conversación: ${conversationType}
       ${selectedCase ? `Caso relacionado: ${cases.find(c => c.id === selectedCase)?.title}` : ''}
+      ${documentContext ? 'Tienes acceso a información específica de los documentos del caso.' : ''}
       
-      Consulta del usuario: ${messageContent}`;
+      Consulta del usuario: ${messageContent}${documentContext}`;
 
-      const result = await model.generateContent(legalContext);
-      const response = await result.response;
-      const aiResponse = response.text();
+      // Generate AI response with retry logic
+      const aiResponse = await generateAIResponse(legalContext);
 
       // Save AI response
       const aiMessage = await aiService.addMessage({
@@ -288,11 +339,20 @@ export const AIAssistant = () => {
       // Update messages state
       setMessages(prev => [...prev, aiMessage]);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al generar respuesta:', error);
+      
+      let errorMessage = "No se pudo generar una respuesta. Intenta nuevamente.";
+      
+      if (error.message?.includes('overloaded') || error.message?.includes('503')) {
+        errorMessage = "El servicio de IA está temporalmente sobrecargado. Por favor, intenta nuevamente en unos momentos.";
+      } else if (error.message?.includes('quota')) {
+        errorMessage = "Se ha alcanzado el límite de uso de la API. Intenta más tarde.";
+      }
+      
       toast({
         title: "Error",
-        description: "No se pudo generar una respuesta. Intenta nuevamente.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -308,38 +368,24 @@ export const AIAssistant = () => {
     }, 100);
   };
 
-  const generateAIResponse = (query: string): string => {
-    if (query.toLowerCase().includes('demanda')) {
-      return `Para redactar una demanda por incumplimiento contractual, debes incluir:
-
-1. **Encabezamiento**: Identificación del juzgado, partes y representación procesal
-2. **Antecedentes de hecho**: Descripción cronológica de los hechos relevantes
-3. **Fundamentos de derecho**: Base legal de la pretensión
-4. **Petitum**: Solicitudes concretas al juzgado
-
-¿Necesitas ayuda con alguna sección específica?`;
-    }
+  // Función para mostrar información de documentos disponibles
+  const showDocumentsInfo = async () => {
+    if (!selectedCase) return;
     
-    if (query.toLowerCase().includes('plazo')) {
-      return `Los plazos procesales más importantes son:
-
-- **Recurso de apelación**: 20 días desde la notificación
-- **Recurso de casación**: 20 días desde la notificación  
-- **Oposición a monitorio**: 20 días desde el requerimiento
-- **Contestación demanda**: 20 días desde el emplazamiento
-
-¿Sobre qué procedimiento específico necesitas información?`;
+    try {
+      const summary = await pdfProcessingService.getCaseDocumentsSummary(selectedCase);
+      const infoMessage = await aiService.addMessage({
+        conversationId: currentConversation,
+        content: `📋 **Documentos disponibles para análisis:**\n\n${summary}\n\n*Puedes hacerme preguntas específicas sobre el contenido de estos documentos.*`,
+        sender: 'ai'
+      });
+      setMessages(prev => [...prev, infoMessage]);
+    } catch (error) {
+      console.error('Error showing documents info:', error);
     }
-
-    return `Entiendo tu consulta. Basándome en la normativa vigente, te recomiendo:
-
-1. Revisar la documentación pertinente
-2. Analizar la jurisprudencia aplicable  
-3. Considerar los plazos procesales
-4. Evaluar las posibles alternativas
-
-¿Podrías proporcionar más detalles específicos sobre tu caso?`;
   };
+
+
 
   const detectMessageType = (message: string): Message['type'] => {
     if (message.toLowerCase().includes('demanda') || message.toLowerCase().includes('contrato')) {
@@ -436,11 +482,22 @@ export const AIAssistant = () => {
           </Select>
         </div>
         
-        <div className="flex items-end">
-          <Button onClick={createNewConversation} className="w-full">
+        <div className="flex gap-2">
+          <Button onClick={createNewConversation} className="flex-1">
             <Plus className="h-4 w-4 mr-2" />
             Nueva Conversación
           </Button>
+          {selectedCase && selectedCase !== 'none' && (
+            <Button 
+              onClick={showDocumentsInfo} 
+              variant="outline" 
+              className="flex-1"
+              disabled={!currentConversation}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Ver Documentos
+            </Button>
+          )}
         </div>
       </div>
 
