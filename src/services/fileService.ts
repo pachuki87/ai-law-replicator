@@ -17,6 +17,19 @@ class FileService {
   private readonly UPLOADS_DIR = '/uploads'
   private readonly MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
   private readonly ALLOWED_TYPES = ['application/pdf']
+  
+  // Configuración de URLs según el entorno
+  private getApiBaseUrl(): string {
+    // Detectar si estamos en desarrollo o producción
+    const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost'
+    
+    if (isDevelopment) {
+      return 'http://localhost:3002'
+    } else {
+      // En producción, usar las funciones de Netlify
+      return '/api'
+    }
+  }
 
   /**
    * Sube un archivo PDF al almacenamiento local y guarda la referencia en la base de datos
@@ -221,7 +234,8 @@ class FileService {
       }
 
       // Enviar archivo al servidor backend
-      const response = await fetch('http://localhost:3002/upload', {
+      const apiUrl = `${this.getApiBaseUrl()}/upload`
+      const response = await fetch(apiUrl, {
         method: 'POST',
         body: formData
       })
@@ -242,7 +256,8 @@ class FileService {
    */
   private async deleteLocalFile(filePath: string): Promise<void> {
     try {
-      await fetch('http://localhost:3002/delete', {
+      const apiUrl = `${this.getApiBaseUrl()}/delete`
+      await fetch(apiUrl, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
