@@ -220,8 +220,8 @@ class FileService {
         onProgress({ loaded: file.size / 2, total: file.size, percentage: 50 })
       }
 
-      // Enviar archivo al servidor (esto requiere un endpoint en el backend)
-      const response = await fetch('/api/upload', {
+      // Enviar archivo al servidor backend
+      const response = await fetch('http://localhost:3002/upload', {
         method: 'POST',
         body: formData
       })
@@ -242,7 +242,7 @@ class FileService {
    */
   private async deleteLocalFile(filePath: string): Promise<void> {
     try {
-      await fetch('/api/delete', {
+      await fetch('http://localhost:3002/delete', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
