@@ -37,8 +37,12 @@ export const Sidebar = ({ activeModule, onModuleChange, isOpen, className }: Sid
   const navigate = useNavigate();
   
   const handleModuleClick = (module: any) => {
+    console.log('🔥 Button clicked! Module ID:', module.id);
+    console.log('🔥 About to navigate or change module');
     if (module.isRoute) {
+      console.log('🔥 Navigating to:', `/${module.id}`);
       navigate(`/${module.id}`);
+      console.log('🔥 Navigation called');
     } else {
       onModuleChange(module.id);
     }
@@ -48,7 +52,7 @@ export const Sidebar = ({ activeModule, onModuleChange, isOpen, className }: Sid
     <aside className={cn(
       "bg-card border-r border-border transition-all duration-300 ease-in-out",
       isOpen ? "w-64" : "w-0 lg:w-16",
-      "fixed lg:relative z-40 h-full overflow-hidden",
+      "fixed lg:relative z-50 h-full overflow-hidden",
       className
     )}>
       <div className="p-4 space-y-2">
@@ -61,7 +65,7 @@ export const Sidebar = ({ activeModule, onModuleChange, isOpen, className }: Sid
               key={module.id}
               variant={isActive ? "legal" : "ghost"}
               className={cn(
-                "w-full justify-start gap-3 transition-all duration-200",
+                "w-full justify-start gap-3 transition-all duration-200 cursor-pointer",
                 isActive && "shadow-md bg-gradient-to-r from-legal-primary to-primary-glow",
                 !isOpen && "lg:justify-center lg:px-2"
               )}

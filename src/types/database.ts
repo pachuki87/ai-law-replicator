@@ -430,25 +430,34 @@ export interface Database {
         Row: {
           id: string
           conversation_id: string
-          role: string
+          sender: string
           content: string
+          message_type: string | null
           metadata: Json | null
+          ai_provider: string | null
+          tokens_used: number | null
           created_at: string
         }
         Insert: {
           id?: string
           conversation_id: string
-          role: string
+          sender: string
           content: string
+          message_type?: string | null
           metadata?: Json | null
+          ai_provider?: string | null
+          tokens_used?: number | null
           created_at?: string
         }
         Update: {
           id?: string
           conversation_id?: string
-          role?: string
+          sender?: string
           content?: string
+          message_type?: string | null
           metadata?: Json | null
+          ai_provider?: string | null
+          tokens_used?: number | null
           created_at?: string
         }
       }

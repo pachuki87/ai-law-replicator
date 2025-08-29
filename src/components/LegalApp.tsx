@@ -12,7 +12,7 @@ import { Compliance } from "@/components/modules/Compliance";
 
 export const LegalApp = () => {
   const [activeModule, setActiveModule] = useState("dashboard");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const renderModule = () => {
     switch (activeModule) {
@@ -20,6 +20,15 @@ export const LegalApp = () => {
         return <Dashboard onModuleChange={setActiveModule} />;
       case "documents":
         return <DocumentAutomation />;
+      case "search":
+        return (
+          <div className="bg-gradient-to-r from-legal-secondary to-legal-primary text-primary-foreground rounded-lg p-8">
+            <h1 className="text-3xl font-bold mb-2">Búsqueda Avanzada</h1>
+            <p className="text-primary-foreground/90">
+              Redirigiendo a la página de búsqueda...
+            </p>
+          </div>
+        );
       case "research":
         return <LegalResearch />;
       case "databases":
@@ -51,21 +60,23 @@ export const LegalApp = () => {
       <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       
       <div className="flex-1 flex overflow-hidden">
-        <Sidebar 
-          activeModule={activeModule}
-          onModuleChange={(module) => {
-            setActiveModule(module);
-            setSidebarOpen(false);
-          }}
-          isOpen={sidebarOpen}
-        />
-        
         {sidebarOpen && (
           <div 
             className="fixed inset-0 bg-black/50 z-30 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
+        
+        <Sidebar 
+          activeModule={activeModule}
+          onModuleChange={(module) => {
+            console.log('🔥 LegalApp onModuleChange called with:', module);
+            setActiveModule(module);
+            // No cerrar sidebar inmediatamente para evitar interferencia
+            setTimeout(() => setSidebarOpen(false), 100);
+          }}
+          isOpen={sidebarOpen}
+        />
         
         <main className="flex-1 overflow-auto p-6">
           {renderModule()}

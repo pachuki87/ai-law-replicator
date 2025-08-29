@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Calendar, FileText, Briefcase, ChevronDown, ChevronUp, Loader2, AlertCircle, Users, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ interface SearchFilters {
 }
 
 const SearchPage: React.FC = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,6 +41,39 @@ const SearchPage: React.FC = () => {
   const [totalResults, setTotalResults] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const resultsPerPage = 10;
+
+  const handleModuleChange = (module: string) => {
+    console.log('Navigating to module:', module);
+    switch (module) {
+      case 'dashboard':
+        navigate('/');
+        break;
+      case 'clients':
+        navigate('/clients');
+        break;
+      case 'cases':
+        navigate('/cases');
+        break;
+      case 'documents':
+        navigate('/documents');
+        break;
+      case 'calendar':
+        navigate('/calendar');
+        break;
+      case 'reports':
+        navigate('/reports');
+        break;
+      case 'search':
+        // Ya estamos en search, no hacer nada
+        break;
+      case 'settings':
+        navigate('/settings');
+        break;
+      default:
+        console.warn('Unknown module:', module);
+    }
+    setSidebarOpen(false);
+  };
 
   const [filters, setFilters] = useState<SearchFilters>({
     type: 'all',
@@ -211,7 +246,7 @@ const SearchPage: React.FC = () => {
       <div className="flex-1 flex overflow-hidden">
         <Sidebar 
           activeModule="search"
-          onModuleChange={() => {}}
+          onModuleChange={handleModuleChange}
           isOpen={sidebarOpen}
         />
         

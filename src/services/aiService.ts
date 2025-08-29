@@ -13,7 +13,7 @@ export interface ConversationWithMessages extends AiConversation {
 
 export interface MessageData {
   conversationId: string
-  role: 'user' | 'assistant' | 'system'
+  sender: 'user' | 'ai' | 'system'
   content: string
   metadata?: Record<string, any>
 }
@@ -22,7 +22,6 @@ export interface ConversationData {
   title: string
   caseId?: string
   conversationType: string
-  context?: Record<string, any>
 }
 
 class AiService {
@@ -34,11 +33,10 @@ class AiService {
       const { data, error } = await supabase
         .from('ai_conversations')
         .insert({
-          user_id: 'anonymous',
+          user_id: null, // Aplicación abierta sin usuarios
           case_id: conversationData.caseId || null,
           title: conversationData.title,
-          conversation_type: conversationData.conversationType,
-          context: conversationData.context || null
+          conversation_type: conversationData.conversationType
         })
         .select()
         .single()
@@ -179,7 +177,7 @@ class AiService {
         .from('ai_messages')
         .insert({
           conversation_id: messageData.conversationId,
-          role: messageData.role,
+          sender: messageData.sender,
           content: messageData.content,
           metadata: messageData.metadata || null
         })
@@ -218,6 +216,11 @@ class AiService {
       console.error('Get messages error:', error)
       return []
     }
+  }
+
+  // Alias for getMessages - for compatibility
+  async getConversationMessages(conversationId: string): Promise<AiMessage[]> {
+    return this.getMessages(conversationId)
   }
 
   // Update message
@@ -262,11 +265,11 @@ class AiService {
 
   // ============ CONVERSATION MANAGEMENT ============
 
-  // Archive conversation
+  // Archive conversation (simplified without context)
   async archiveConversation(conversationId: string): Promise<boolean> {
     try {
       const result = await this.updateConversation(conversationId, {
-        context: { archived: true, archived_at: new Date().toISOString() }
+        title: '[ARCHIVED] ' + (await this.getConversation(conversationId))?.title || 'Conversation'
       })
       return result !== null
     } catch (error) {
@@ -275,17 +278,14 @@ class AiService {
     }
   }
 
-  // Unarchive conversation
+  // Unarchive conversation (simplified without context)
   async unarchiveConversation(conversationId: string): Promise<boolean> {
     try {
       const conversation = await this.getConversation(conversationId)
       if (!conversation) return false
 
-      const context = conversation.context as Record<string, any> || {}
-      delete context.archived
-      delete context.archived_at
-
-      const result = await this.updateConversation(conversationId, { context })
+      const title = conversation.title.replace('[ARCHIVED] ', '')
+      const result = await this.updateConversation(conversationId, { title })
       return result !== null
     } catch (error) {
       console.error('Unarchive conversation error:', error)
@@ -293,13 +293,13 @@ class AiService {
     }
   }
 
-  // Get archived conversations
+  // Get archived conversations (simplified without context)
   async getArchivedConversations(): Promise<AiConversation[]> {
     try {
       const { data, error } = await supabase
         .from('ai_conversations')
         .select('*')
-        .not('context->archived', 'is', null)
+        .ilike('title', '[ARCHIVED]%')
         .order('updated_at', { ascending: false })
 
       if (error) throw error
@@ -352,7 +352,7 @@ class AiService {
       const { data, error } = await supabase
         .from('ai_conversations')
         .select('*')
-        .is('context->archived', null)
+        .not('title', 'ilike', '[ARCHIVED]%')
         .order('updated_at', { ascending: false })
         .limit(limit)
 
@@ -375,7 +375,7 @@ class AiService {
     try {
       const { data: conversations, error: convError } = await supabase
         .from('ai_conversations')
-        .select('id, conversation_type, created_at, context')
+        .select('id, conversation_type, created_at, title')
 
       if (convError) throw convError
 
@@ -399,7 +399,7 @@ class AiService {
       ).length
 
       const archivedConversations = conversationData.filter(
-        conv => conv.context && (conv.context as any).archived
+        conv => conv.title && conv.title.startsWith('[ARCHIVED]')
       ).length
 
       return {
