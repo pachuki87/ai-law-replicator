@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 interface SidebarProps {
   activeModule: string;
@@ -22,7 +23,8 @@ interface SidebarProps {
 const modules = [
   { id: "dashboard", name: "Dashboard", icon: Home },
   { id: "documents", name: "Automatización de Documentos", icon: FileText },
-  { id: "research", name: "Investigación Jurídica", icon: Search },
+  { id: "search", name: "Búsqueda Avanzada", icon: Search, isRoute: true },
+  { id: "research", name: "Investigación Jurídica", icon: Database },
   { id: "databases", name: "Bases de Datos Jurídicas", icon: Database },
   { id: "assistant", name: "Asistente IA", icon: MessageSquare },
   { id: "cases", name: "Gestión de Casos", icon: FolderOpen },
@@ -32,6 +34,16 @@ const modules = [
 ];
 
 export const Sidebar = ({ activeModule, onModuleChange, isOpen, className }: SidebarProps) => {
+  const navigate = useNavigate();
+  
+  const handleModuleClick = (module: any) => {
+    if (module.isRoute) {
+      navigate(`/${module.id}`);
+    } else {
+      onModuleChange(module.id);
+    }
+  };
+  
   return (
     <aside className={cn(
       "bg-card border-r border-border transition-all duration-300 ease-in-out",
@@ -53,7 +65,7 @@ export const Sidebar = ({ activeModule, onModuleChange, isOpen, className }: Sid
                 isActive && "shadow-md bg-gradient-to-r from-legal-primary to-primary-glow",
                 !isOpen && "lg:justify-center lg:px-2"
               )}
-              onClick={() => onModuleChange(module.id)}
+              onClick={() => handleModuleClick(module)}
             >
               <Icon className={cn("h-5 w-5", isActive && "text-primary-foreground")} />
               {isOpen && (
