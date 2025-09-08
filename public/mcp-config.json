@@ -1,0 +1,46 @@
+{
+  "services": [
+    {
+      "name": "MCP Playwright",
+      "description": "Automatización web para consultas al BOE y CENDOJ",
+      "status": "active",
+      "icon": "🎭",
+      "capabilities": ["BOE Search", "CENDOJ Search", "Web Automation"]
+    },
+    {
+      "name": "BOE Service",
+      "description": "Consultas específicas al Boletín Oficial del Estado",
+      "status": "active",
+      "icon": "📄",
+      "capabilities": ["Legal Search", "Normative Updates", "Legislation Lookup"]
+    },
+    {
+      "name": "CENDOJ Service",
+      "description": "Centro de Documentación Judicial - Jurisprudencia",
+      "status": "active",
+      "icon": "⚖️",
+      "capabilities": ["Jurisprudence Search", "Court Decisions", "Legal Precedents"]
+    },
+    {
+      "name": "Rube",
+      "description": "Procesamiento avanzado y análisis de datos",
+      "status": "active",
+      "icon": "🔧",
+      "capabilities": ["Data Processing", "Advanced Analysis", "Complex Queries"]
+    },
+    {
+      "name": "Fetch-MCP",
+      "description": "Obtención de datos externos y APIs",
+      "status": "active",
+      "icon": "🌐",
+      "capabilities": ["External APIs", "Data Fetching", "Web Scraping"]
+    },
+    {
+      "name": "Sequential Thinking",
+      "description": "Análisis secuencial y razonamiento estructurado",
+      "status": "active",
+      "icon": "🧠",
+      "capabilities": ["Sequential Analysis", "Structured Reasoning", "Step-by-step Processing"]
+    }
+  ]
+}

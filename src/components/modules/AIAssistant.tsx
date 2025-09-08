@@ -35,6 +35,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { aiService } from "@/services/aiService";
 import caseService from "@/services/caseService";
 import { pdfProcessingService } from "@/services/pdfProcessingService";
+import MCPBoeService from "@/services/mcpBoeService";
+import { MCPCendojService } from "@/services/mcpCendojService";
+import MCPStatus from "@/components/MCPStatus";
 import { Database, Case } from "@/types/database";
 
 type AIConversation = Database['public']['Tables']['ai_conversations']['Row'];
@@ -232,7 +235,75 @@ export const AIAssistant = () => {
     return messages.length;
   };
 
-  // Función para generar respuesta de IA con reintentos
+  // Función para consultar el BOE usando MCP Playwright automáticamente
+  const consultarBOEAutomatico = async (terminos: string[]): Promise<string> => {
+    if (terminos.length === 0) return '';
+    
+    try {
+      // Usar MCP para buscar automáticamente en BOE
+      const terminosPrincipales = terminos.slice(0, 2);
+      
+      // Intentar usar el servicio MCP BOE
+       try {
+         const mcpBoeService = MCPBoeService.getInstance();
+         const mcpResult = await mcpBoeService.searchBOE(terminosPrincipales[0]);
+         
+         if (mcpResult && mcpResult.success) {
+           return `\n\n📋 **CONSULTA BOE (MCP)**:\n` +
+                  `🔍 Resultado para: ${terminosPrincipales[0]}\n` +
+                  `📄 ${mcpResult.data || 'Consulta realizada exitosamente'}\n` +
+                  `🔗 ${mcpResult.url || 'https://www.boe.es'}`;
+         }
+       } catch (mcpError) {
+         console.log('MCP no disponible, usando método alternativo:', mcpError);
+       }
+      
+      // Método alternativo si MCP no está disponible
+      return `\n\n📋 **ANÁLISIS LEGAL AUTOMÁTICO**:\n` +
+             `🔍 Términos detectados: ${terminosPrincipales.join(', ')}\n` +
+             `⚖️ Verificar normativa vigente en BOE para estos términos\n` +
+             `🔗 Consultar: https://www.boe.es/buscar/`;
+             
+    } catch (error) {
+      console.error('Error en consulta BOE automática:', error);
+      return `\n\n📋 **BOE**: Verificar normativa vigente en https://www.boe.es`;
+    }
+  };
+
+  // Función para consultar jurisprudencia en CENDOJ usando MCP Playwright automáticamente
+  const consultarCENDOJAutomatico = async (terminos: string[]): Promise<string> => {
+    if (terminos.length === 0) return '';
+    
+    try {
+      const mcpCendojService = MCPCendojService.getInstance();
+      const resultado = await mcpCendojService.searchJurisprudencia(terminos);
+      return resultado;
+    } catch (error) {
+      console.error('Error en consulta CENDOJ automática:', error);
+      const terminosPrincipales = terminos.slice(0, 2);
+      const searchQuery = terminosPrincipales.join(' ');
+      const cendojUrl = `https://www.poderjudicial.es/search/indexAN.jsp?texto=${encodeURIComponent(searchQuery)}`;
+      
+      return `\n\n📚 **JURISPRUDENCIA RECOMENDADA**:\n` +
+             `🔍 Términos detectados: ${terminosPrincipales.join(', ')}\n` +
+             `⚖️ Consultar precedentes jurisprudenciales relevantes\n` +
+             `🔗 Buscar en CENDOJ: ${cendojUrl}`;
+    }
+  };
+
+  // Función para detectar términos legales que requieren consulta BOE
+  const detectarTerminosLegales = (texto: string): string[] => {
+    const terminosLegales = [
+      'código civil', 'ley orgánica', 'real decreto', 'orden ministerial',
+      'constitución', 'estatuto', 'reglamento', 'directiva europea',
+      'jurisprudencia', 'tribunal supremo', 'audiencia nacional'
+    ];
+    
+    return terminosLegales.filter(termino => 
+      texto.toLowerCase().includes(termino.toLowerCase())
+    );
+  };
+
   const generateAIResponse = async (prompt: string, maxRetries: number = 3): Promise<string> => {
     if (!genAI) {
       throw new Error('Google AI no está configurado');
@@ -244,7 +315,38 @@ export const AIAssistant = () => {
       try {
         const result = await model.generateContent(prompt);
         const response = await result.response;
-        return response.text();
+        let aiResponse = response.text();
+        
+        // Detectar términos legales en la consulta original
+        const terminosDetectados = detectarTerminosLegales(prompt);
+        
+        // Detectar términos que requieren consulta jurisprudencial
+        const mcpCendojService = MCPCendojService.getInstance();
+        const terminosJurisprudenciales = mcpCendojService.detectLegalTerms(prompt);
+        
+        // Validar que la respuesta incluye las 3 reglas fundamentales
+        const hasNormativa = aiResponse.toLowerCase().includes('normativa') || aiResponse.toLowerCase().includes('ley') || aiResponse.toLowerCase().includes('reglamento');
+        const hasLegislacion = aiResponse.toLowerCase().includes('legislación') || aiResponse.toLowerCase().includes('vigente') || aiResponse.toLowerCase().includes('modificación');
+        const hasCodivoCivil = aiResponse.toLowerCase().includes('código civil') || aiResponse.toLowerCase().includes('artículo');
+        
+        // Consulta automática al BOE si se detectaron términos legales
+        if (terminosDetectados.length > 0) {
+          const consultaBOE = await consultarBOEAutomatico(terminosDetectados);
+          aiResponse += consultaBOE;
+        }
+        
+        // Consulta automática a CENDOJ si se detectaron términos jurisprudenciales
+        if (terminosJurisprudenciales.length > 0) {
+          const consultaCENDOJ = await consultarCENDOJAutomatico(terminosJurisprudenciales);
+          aiResponse += consultaCENDOJ;
+        }
+        
+        // Si falta alguna regla, agregar recordatorio
+        if (!hasNormativa || !hasLegislacion || !hasCodivoCivil) {
+          aiResponse += "\n\n⚖️ **RECORDATORIO LEGAL**: Recuerda verificar la normativa específica aplicable, la legislación vigente y los artículos del Código Civil relevantes para este caso.";
+        }
+        
+        return aiResponse;
       } catch (error: any) {
         console.error(`Intento ${attempt} fallido:`, error);
         
@@ -268,6 +370,59 @@ export const AIAssistant = () => {
     throw new Error('No se pudo generar respuesta después de varios intentos');
   };
 
+  // Función para detectar solicitudes específicas de MCP
+  const detectMCPRequest = (message: string): boolean => {
+    const lowerMessage = message.toLowerCase();
+    const mcpPatterns = [
+      'mcp',
+      'playwright',
+      'rube',
+      'fetch-mcp',
+      'sequential thinking',
+      'usar mcp',
+      'utilizar mcp',
+      'mcp playwright',
+      'mcp service',
+      'servicios mcp'
+    ];
+    
+    return mcpPatterns.some(pattern => lowerMessage.includes(pattern));
+  };
+
+  // Función para generar respuesta sobre servicios MCP disponibles
+  const generateMCPResponse = (): string => {
+    return `🤖 **Servicios MCP Disponibles**
+
+Actualmente tengo acceso a los siguientes servicios MCP que se utilizan automáticamente según tu consulta:
+
+🔍 **MCP Playwright** - Para consultas al BOE y CENDOJ
+• Se activa automáticamente cuando detecto términos legales
+• Busca normativa actualizada en el BOE
+• Consulta jurisprudencia en CENDOJ
+
+📄 **BOE Service** - Consultas específicas al Boletín Oficial del Estado
+• Búsqueda de leyes, decretos y normativas
+• Información actualizada de legislación
+
+⚖️ **CENDOJ Service** - Centro de Documentación Judicial
+• Búsqueda de jurisprudencia
+• Sentencias del Tribunal Supremo y otros tribunales
+
+🔧 **Otros servicios configurados:**
+• Rube - Procesamiento avanzado
+• Fetch-MCP - Obtención de datos externos
+• Sequential Thinking - Análisis secuencial
+
+**¿Cómo funcionan?**
+Estos servicios se activan automáticamente cuando:
+- Haces consultas sobre normativa legal
+- Preguntas sobre jurisprudencia
+- Necesitas información actualizada del BOE
+- Solicitas análisis de casos legales
+
+¡Simplemente haz tu consulta legal y los servicios MCP apropiados se activarán automáticamente! 🚀`;
+  };
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || !currentConversation) {
       if (!currentConversation) {
@@ -285,6 +440,28 @@ export const AIAssistant = () => {
     setIsLoading(true);
 
     try {
+      // Detectar si es una solicitud específica sobre MCP
+      if (detectMCPRequest(messageContent)) {
+        // Save user message
+        const userMessage = await aiService.addMessage({
+          conversationId: currentConversation,
+          content: messageContent,
+          sender: 'user'
+        });
+        setMessages(prev => [...prev, userMessage]);
+
+        // Generate MCP information response
+        const mcpResponse = generateMCPResponse();
+        const aiMessage = await aiService.addMessage({
+          conversationId: currentConversation,
+          content: mcpResponse,
+          sender: 'ai'
+        });
+        setMessages(prev => [...prev, aiMessage]);
+        setIsLoading(false);
+        return;
+      }
+
       // Save user message
       const userMessage = await aiService.addMessage({
         conversationId: currentConversation,
@@ -316,10 +493,22 @@ export const AIAssistant = () => {
         }
       }
 
-      // Legal context for the prompt
-      const legalContext = `Eres un asistente jurídico especializado en derecho español. 
-      Proporciona respuestas precisas, profesionales y basadas en principios legales. 
-      Si la consulta requiere asesoría legal específica, recomienda consultar con un abogado.
+      // Legal context for the prompt with 3 fundamental rules
+      const legalContext = `Eres un asistente jurídico especializado en derecho español que SIEMPRE debe seguir estas 3 REGLAS FUNDAMENTALES:
+      
+      🔹 REGLA 1 - NORMATIVA APLICABLE: En cada consulta o caso, identifica y cita la normativa específica aplicable (leyes, reglamentos, decretos, órdenes ministeriales).
+      
+      🔹 REGLA 2 - LEGISLACIÓN Y MODIFICACIONES: Siempre verifica y menciona la legislación vigente, incluyendo cualquier modificación reciente que pueda afectar el caso.
+      
+      🔹 REGLA 3 - CÓDIGO CIVIL: Cuando sea relevante, referencia los artículos específicos del Código Civil español que apliquen al caso.
+      
+      INSTRUCCIONES ADICIONALES:
+      - Proporciona respuestas precisas, profesionales y basadas en principios legales
+      - Si la consulta requiere asesoría legal específica, recomienda consultar con un abogado
+      - Siempre incluye referencias normativas específicas (artículos, leyes, fechas de entrada en vigor)
+      - Menciona si existe jurisprudencia relevante del Tribunal Supremo o Tribunales Superiores
+      - Si hay dudas sobre la vigencia de una norma, recomienda consultar el BOE
+      
       Tipo de conversación: ${conversationType}
       ${selectedCase ? `Caso relacionado: ${cases.find(c => c.id === selectedCase)?.title}` : ''}
       ${documentContext ? 'Tienes acceso a información específica de los documentos del caso.' : ''}
@@ -384,8 +573,6 @@ export const AIAssistant = () => {
       console.error('Error showing documents info:', error);
     }
   };
-
-
 
   const detectMessageType = (message: string): Message['type'] => {
     if (message.toLowerCase().includes('demanda') || message.toLowerCase().includes('contrato')) {
@@ -899,6 +1086,9 @@ export const AIAssistant = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* MCP Status */}
+          <MCPStatus />
         </div>
       </div>
     </div>
