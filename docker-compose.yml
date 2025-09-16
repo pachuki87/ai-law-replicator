@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  legal-case-generator:
+    build: .
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - AGENT_ZERO_URL=http://172.17.0.4:80
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+    restart: unless-stopped
+    container_name: legal-case-generator-app
+    network_mode: bridge
+
+# Nota: El contenedor agent-zero-abogado ya existe y está ejecutándose
+# Se conectará usando la IP interna del contenedor: 172.17.0.4:80

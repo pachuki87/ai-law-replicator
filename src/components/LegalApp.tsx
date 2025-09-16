@@ -9,6 +9,7 @@ import { AIAssistant } from "@/components/modules/AIAssistant";
 import CaseManagement from "@/components/modules/CaseManagement";
 import { ResultsPrediction } from "@/components/modules/ResultsPrediction";
 import { Compliance } from "@/components/modules/Compliance";
+import { AgentZero } from "@/components/modules/AgentZero";
 
 export const LegalApp = () => {
   const [activeModule, setActiveModule] = useState("dashboard");
@@ -35,6 +36,8 @@ export const LegalApp = () => {
         return <DatabasesDirectory />;
       case "assistant":
         return <AIAssistant />;
+      case "agent-zero":
+        return <AgentZero />;
       case "cases":
         return <CaseManagement />;
       case "predictions":

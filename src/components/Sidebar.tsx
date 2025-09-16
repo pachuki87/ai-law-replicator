@@ -8,7 +8,8 @@ import {
   Home,
   Settings,
   Database,
-  Gavel
+  Gavel,
+  Bot
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ const modules = [
   { id: "research", name: "Investigación Jurídica", icon: Database },
   { id: "databases", name: "Bases de Datos Jurídicas", icon: Database },
   { id: "assistant", name: "Asistente IA", icon: MessageSquare },
+  { id: "agent-zero", name: "Agent Zero", icon: Bot },
   { id: "cases", name: "Gestión de Casos", icon: FolderOpen },
   { id: "predictions", name: "Predicción de Resultados", icon: TrendingUp },
   { id: "compliance", name: "Compliance", icon: Shield },

@@ -19,6 +19,12 @@ dist-ssr
 .env.test.local
 .env.production.local
 
+# Agent Zero configuration with credentials
+agent-zero.env
+
+# Agent Zero repository (embedded git repo)
+agent zero/
+
 # API Keys and sensitive data
 *.key
 *.pem

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, FileText, Folder, AlertCircle, Download } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AgentZeroIntegration } from '@/components/AgentZeroIntegration';
 
 interface CaseGenerationStep {
   id: string;
@@ -671,6 +672,14 @@ footer {
           </CardContent>
         </Card>
       )}
+
+      {/* Integración con Agent Zero */}
+      <AgentZeroIntegration 
+        caseData={generatedCase || caseDetails}
+        onResponse={(response) => {
+          console.log('Respuesta de Agent Zero:', response);
+        }}
+      />
 
       {generatedCase && (
         <Card>
