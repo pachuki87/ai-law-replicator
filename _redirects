@@ -1,0 +1,7 @@
+# Redirects para Cloudflare Pages
+# Redirigir todas las rutas de la API a las funciones de Workers
+/api/upload /api/upload 200
+/api/delete /api/delete 200
+
+# Redirigir todas las demás rutas al index.html para SPA
+/* /index.html 200

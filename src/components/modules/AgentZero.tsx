@@ -27,26 +27,67 @@ export const AgentZero = ({ className }: AgentZeroProps) => {
       setIsLoading(true);
       setError(null);
       
+      // Crear credenciales de autenticación básica
+      const credentials = btoa('harmancitos:harmancitos');
+      
       const response = await fetch(AGENT_ZERO_URL, {
         method: 'GET',
-        mode: 'no-cors' // Para evitar problemas de CORS en la verificación
+        headers: {
+          'Authorization': `Basic ${credentials}`
+        },
+        mode: 'cors'
       });
       
-      setIsConnected(true);
-      toast({
-        title: "Agent Zero Conectado",
-        description: "La conexión con Agent Zero se ha establecido correctamente.",
-      });
+      if (response.ok || response.status === 200) {
+        setIsConnected(true);
+        toast({
+          title: "Agent Zero Conectado",
+          description: "La conexión con Agent Zero se ha establecido correctamente.",
+        });
+      } else if (response.status === 401) {
+        setError("Error de autenticación con Agent Zero. Verificando credenciales...");
+        setIsConnected(false);
+      } else {
+        setError(`Error de conexión: ${response.status}`);
+        setIsConnected(false);
+      }
     } catch (err) {
-      setError("No se pudo conectar con Agent Zero. Asegúrate de que esté ejecutándose en el puerto 8081.");
-      setIsConnected(false);
+      // Intentar conexión sin CORS como fallback
+      try {
+        await fetch(AGENT_ZERO_URL, {
+          method: 'GET',
+          mode: 'no-cors'
+        });
+        setIsConnected(true);
+        toast({
+          title: "Agent Zero Detectado",
+          description: "Agent Zero está ejecutándose. Usa 'Abrir en Nueva Pestaña' para acceso completo.",
+        });
+      } catch (fallbackErr) {
+        setError("No se pudo conectar con Agent Zero. Asegúrate de que esté ejecutándose en el puerto 8081.");
+        setIsConnected(false);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const openInNewTab = () => {
-    window.open(AGENT_ZERO_URL, '_blank', 'noopener,noreferrer');
+    // Crear URL con autenticación básica embebida
+    const authUrl = `http://harmancitos:harmancitos@localhost:8081`;
+    
+    // Intentar abrir con credenciales embebidas
+    try {
+      window.open(authUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      // Fallback: abrir URL normal y mostrar instrucciones
+      window.open(AGENT_ZERO_URL, '_blank', 'noopener,noreferrer');
+      toast({
+        title: "Autenticación Requerida",
+        description: "Usuario: harmancitos, Contraseña: harmancitos",
+        duration: 5000,
+      });
+    }
   };
 
   if (isLoading) {
@@ -127,13 +168,30 @@ export const AgentZero = ({ className }: AgentZeroProps) => {
         </CardHeader>
         <CardContent className="p-0">
           {isConnected ? (
-            <iframe
-              src={AGENT_ZERO_URL}
-              className="w-full h-full border-0 rounded-b-lg"
-              title="Agent Zero Interface"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
-              style={{ minHeight: '600px' }}
-            />
+            <div className="relative w-full h-full">
+              <iframe
+                src={`${AGENT_ZERO_URL}?auth=${btoa('harmancitos:harmancitos')}`}
+                className="w-full h-full border-0 rounded-b-lg"
+                title="Agent Zero Interface"
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"
+                style={{ minHeight: '600px' }}
+                onLoad={() => {
+                  // Intentar inyectar credenciales si es necesario
+                  console.log('Agent Zero iframe cargado');
+                }}
+              />
+              <div className="absolute top-2 right-2 z-10">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={openInNewTab}
+                  className="bg-background/80 backdrop-blur-sm"
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  Nueva Pestaña
+                </Button>
+              </div>
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-96 text-center p-8">
               <AlertCircle className="h-16 w-16 text-muted-foreground mb-4" />

@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import SearchPage from "./pages/SearchPage";
 import NotFound from "./pages/NotFound";
 import LegalCaseGenerator from "./components/LegalCaseGenerator";
+import DocumentTemplateManager from "./components/DocumentTemplateManager";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/legal-case-generator" element={<LegalCaseGenerator />} />
+          <Route path="/document-templates" element={<DocumentTemplateManager />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

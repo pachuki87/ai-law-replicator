@@ -9,7 +9,8 @@ import {
   Settings,
   Database,
   Gavel,
-  Bot
+  Bot,
+  File
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ interface SidebarProps {
 const modules = [
   { id: "dashboard", name: "Dashboard", icon: Home },
   { id: "documents", name: "Automatización de Documentos", icon: FileText },
+  { id: "document-templates", name: "Plantillas de Documentos", icon: File, isRoute: true },
   { id: "search", name: "Búsqueda Avanzada", icon: Search, isRoute: true },
   { id: "legal-case-generator", name: "Generador de Casos", icon: Gavel, isRoute: true },
   { id: "research", name: "Investigación Jurídica", icon: Database },

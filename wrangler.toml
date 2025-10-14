@@ -1,0 +1,51 @@
+name = "ai-law-replicator"
+compatibility_date = "2024-01-15"
+
+# Configuración para Cloudflare Pages
+[env.production]
+account_id = "YOUR_ACCOUNT_ID"
+zone_id = "YOUR_ZONE_ID"
+
+# Variables de entorno para producción
+[env.production.vars]
+NODE_ENV = "production"
+VITE_SUPABASE_URL = "YOUR_SUPABASE_URL"
+VITE_SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY"
+VITE_OPENAI_API_KEY = "YOUR_OPENAI_API_KEY"
+VITE_GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
+VITE_APP_NAME = "AI Law Replicator"
+VITE_APP_VERSION = "1.0.0"
+VITE_AGENT_ZERO_URL = "YOUR_AGENT_ZERO_URL"
+VITE_AGENT_ZERO_USERNAME = "harmancitos"
+VITE_AGENT_ZERO_PASSWORD = "harmancitos"
+
+# Configuración de build
+[build]
+command = "npm run build"
+cwd = "."
+watch_dir = "src"
+
+# Configuración de Pages
+[pages]
+build_output_dir = "dist"
+build_command = "npm run build"
+
+# Configuración de Workers para funciones serverless
+[[workers]]
+name = "upload-worker"
+main = "workers/upload.js"
+compatibility_date = "2024-01-15"
+
+[[workers]]
+name = "delete-worker"
+main = "workers/delete.js"
+compatibility_date = "2024-01-15"
+
+# Configuración de rutas para Workers
+[[pages.functions]]
+routing = { pattern = "/api/upload" }
+script = "workers/upload.js"
+
+[[pages.functions]]
+routing = { pattern = "/api/delete" }
+script = "workers/delete.js"

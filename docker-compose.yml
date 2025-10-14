@@ -4,11 +4,15 @@ services:
   legal-case-generator:
     build: .
     ports:
-      - "3002:3002"
+      - "5173:5173"  # Puerto actualizado para Vite
     environment:
       - NODE_ENV=production
-      - PORT=3002
+      - PORT=5173
       - AGENT_ZERO_URL=http://172.17.0.4:80
+      # Variables de ngrok (opcionales)
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN:-}
+      - NGROK_REGION=${NGROK_REGION:-us}
+      - NGROK_SUBDOMAIN=${NGROK_SUBDOMAIN:-}
     volumes:
       - ./src:/app/src
       - ./public:/app/public
