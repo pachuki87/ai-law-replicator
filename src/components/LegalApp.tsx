@@ -63,6 +63,8 @@ export const LegalApp = () => {
       <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       
       <div className="flex-1 flex overflow-hidden">
+        {/* SIDEBAR TEMPORALMENTE OCULTO - DESCOMENTAR PARA RESTAURAR */}
+        {/* 
         {sidebarOpen && (
           <div 
             className="fixed inset-0 bg-black/50 z-30 lg:hidden"
@@ -80,6 +82,7 @@ export const LegalApp = () => {
           }}
           isOpen={sidebarOpen}
         />
+        */}
         
         <main className="flex-1 overflow-auto p-6">
           {renderModule()}
