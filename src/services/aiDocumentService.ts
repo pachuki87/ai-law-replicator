@@ -303,7 +303,7 @@ class AIDocumentService {
     try {
       const { GoogleGenerativeAI } = await import('@google/generative-ai');
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
       const prompt = documentPrompts[documentType as keyof typeof documentPrompts]?.(formData) || 
         `Genera un documento legal de tipo ${documentType} con la siguiente información:\n\nCliente: ${formData.clientName}\nNúmero de caso: ${formData.caseNumber}\nDetalles: ${formData.details}\nUrgencia: ${formData.urgency}`;

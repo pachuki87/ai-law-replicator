@@ -127,7 +127,15 @@ export class MCPCendojService {
       
       // Derecho Constitucional
       'derechos fundamentales', 'recurso de amparo', 'inconstitucionalidad',
-      'libertad de expresión', 'derecho a la intimidad', 'tutela judicial efectiva'
+      'libertad de expresión', 'derecho a la intimidad', 'tutela judicial efectiva',
+      
+      // Estrategia Legal y Litigación
+      'estrategia legal', 'estrategia procesal', 'táctica de litigación', 'plan de acción legal',
+      'análisis de caso', 'fortalezas del caso', 'debilidades del caso', 'riesgos legales',
+      'oportunidades legales', 'argumentos jurídicos', 'precedentes jurisprudenciales',
+      'cronograma procesal', 'fase probatoria', 'alegaciones', 'conclusiones',
+      'posibilidades de éxito', 'valoración del caso', 'estrategia defensiva',
+      'estrategia de ataque', 'línea argumental', 'teoría del caso'
     ];
     
     const foundTerms: string[] = [];

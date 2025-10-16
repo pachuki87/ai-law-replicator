@@ -1,0 +1,109 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e7]:
+          - img [ref=e8]
+          - heading "LegalAI Pro" [level=1] [ref=e12]
+        - generic [ref=e13]:
+          - generic [ref=e15]: Plataforma Jurídica Integral
+          - button "Inicio" [ref=e16] [cursor=pointer]:
+            - img
+            - generic [ref=e17]: Inicio
+    - main [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - img "Legal AI Platform" [ref=e23]
+          - generic [ref=e24]:
+            - heading "Bienvenido a LegalAI Pro" [level=1] [ref=e25]
+            - paragraph [ref=e26]: La plataforma de inteligencia artificial más completa para profesionales del derecho. Automatiza documentos, investiga jurisprudencia y optimiza tu práctica legal.
+            - button "Comenzar Ahora" [ref=e27] [cursor=pointer]
+        - generic [ref=e28]:
+          - generic [ref=e29]:
+            - generic [ref=e30]:
+              - heading "Documentos Generados" [level=3] [ref=e31]
+              - img [ref=e32]
+            - generic [ref=e35]:
+              - generic [ref=e36]: 2,547
+              - paragraph [ref=e37]: +12% vs mes anterior
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - heading "Casos Activos" [level=3] [ref=e40]
+              - img [ref=e41]
+            - generic [ref=e43]:
+              - generic [ref=e44]: "89"
+              - paragraph [ref=e45]: +5% vs mes anterior
+          - generic [ref=e46]:
+            - generic [ref=e47]:
+              - heading "Consultas IA" [level=3] [ref=e48]
+              - img [ref=e49]
+            - generic [ref=e51]:
+              - generic [ref=e52]: 1,234
+              - paragraph [ref=e53]: +23% vs mes anterior
+          - generic [ref=e54]:
+            - generic [ref=e55]:
+              - heading "Éxito Predictivo" [level=3] [ref=e56]
+              - img [ref=e57]
+            - generic [ref=e60]:
+              - generic [ref=e61]: 94%
+              - paragraph [ref=e62]: +2% vs mes anterior
+        - generic [ref=e63]:
+          - heading "Acciones Rápidas" [level=2] [ref=e64]
+          - generic [ref=e65]:
+            - generic [ref=e67] [cursor=pointer]:
+              - img [ref=e69]
+              - heading "Crear Documento" [level=3] [ref=e72]
+              - paragraph [ref=e73]: Generar contratos y escritos automáticamente
+            - generic [ref=e75] [cursor=pointer]:
+              - img [ref=e77]
+              - heading "Buscar Jurisprudencia" [level=3] [ref=e80]
+              - paragraph [ref=e81]: Investigación legal inteligente
+            - generic [ref=e83] [cursor=pointer]:
+              - img [ref=e85]
+              - heading "Consultar IA" [level=3] [ref=e87]
+              - paragraph [ref=e88]: Asistente jurídico especializado
+            - generic [ref=e90] [cursor=pointer]:
+              - img [ref=e92]
+              - heading "Gestionar Casos" [level=3] [ref=e94]
+              - paragraph [ref=e95]: Organizar expedientes y clientes
+        - generic [ref=e96]:
+          - generic [ref=e97]:
+            - heading "Actividad Reciente" [level=3] [ref=e99]:
+              - img [ref=e100]
+              - text: Actividad Reciente
+            - generic [ref=e103]:
+              - generic [ref=e106]:
+                - paragraph [ref=e107]: Contrato de Arrendamiento generado
+                - paragraph [ref=e108]: Hace 2 horas
+              - generic [ref=e111]:
+                - paragraph [ref=e112]: Consulta sobre derecho laboral
+                - paragraph [ref=e113]: Hace 4 horas
+              - generic [ref=e116]:
+                - paragraph [ref=e117]: Búsqueda jurisprudencial completada
+                - paragraph [ref=e118]: Hace 1 día
+              - generic [ref=e121]:
+                - paragraph [ref=e122]: Caso 'García vs. López' actualizado
+                - paragraph [ref=e123]: Hace 2 días
+          - generic [ref=e124]:
+            - heading "Rendimiento Semanal" [level=3] [ref=e126]:
+              - img [ref=e127]
+              - text: Rendimiento Semanal
+            - generic [ref=e130]:
+              - generic [ref=e132]:
+                - generic [ref=e133]: Documentos Generados
+                - generic [ref=e134]: 45/50
+              - generic [ref=e138]:
+                - generic [ref=e139]: Consultas IA
+                - generic [ref=e140]: 128/150
+              - generic [ref=e144]:
+                - generic [ref=e145]: Casos Gestionados
+                - generic [ref=e146]: 12/15
+              - generic [ref=e150]:
+                - generic [ref=e151]: Precisión Predictiva
+                - generic [ref=e152]: 94/100
+```

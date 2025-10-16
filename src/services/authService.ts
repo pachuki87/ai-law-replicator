@@ -82,6 +82,13 @@ class AuthService {
   // Get current user
   async getCurrentUser(): Promise<User | null> {
     try {
+      // First check if there's an active session
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        return null
+      }
+      
+      // If there's a session, get the user
       const { data: { user }, error } = await supabase.auth.getUser()
       if (error) throw error
       return user
@@ -95,7 +102,13 @@ class AuthService {
   async getCurrentSession(): Promise<Session | null> {
     try {
       const { data: { session }, error } = await supabase.auth.getSession()
-      if (error) throw error
+      if (error) {
+        // Don't throw for certain errors, just return null
+        if (error.message.includes('Auth session missing')) {
+          return null
+        }
+        throw error
+      }
       return session
     } catch (error) {
       console.error('Get current session error:', error)

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import SearchPage from "./pages/SearchPage";
 import NotFound from "./pages/NotFound";
+import AuthCallback from "./pages/AuthCallback";
 import LegalCaseGenerator from "./components/LegalCaseGenerator";
 import DocumentTemplateManager from "./components/DocumentTemplateManager";
 
@@ -20,6 +21,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/legal-case-generator" element={<LegalCaseGenerator />} />
           <Route path="/document-templates" element={<DocumentTemplateManager />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/modules/Dashboard";
@@ -10,10 +10,53 @@ import CaseManagement from "@/components/modules/CaseManagement";
 import { ResultsPrediction } from "@/components/modules/ResultsPrediction";
 import { Compliance } from "@/components/modules/Compliance";
 import { AgentZero } from "@/components/modules/AgentZero";
+import { LandingPage } from "@/components/LandingPage";
+import { authService } from "@/services/authService";
 
 export const LegalApp = () => {
   const [activeModule, setActiveModule] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const user = await authService.getCurrentUser();
+        setIsAuthenticated(!!user);
+      } catch (error) {
+        console.error('Error checking auth:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+
+    // Suscribirse a cambios de autenticación
+    const { data: { subscription } } = authService.onAuthStateChange((event, session) => {
+      setIsAuthenticated(!!session?.user);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleAuthenticated = () => {
+    setIsAuthenticated(true);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-legal-primary/5 to-primary-glow/5">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-legal-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LandingPage onAuthenticated={handleAuthenticated} />;
+  }
 
   const renderModule = () => {
     switch (activeModule) {
@@ -60,7 +103,10 @@ export const LegalApp = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      <Header
+        onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+        onHomeClick={() => setActiveModule("dashboard")}
+      />
       
       <div className="flex-1 flex overflow-hidden">
         {/* SIDEBAR TEMPORALMENTE OCULTO - DESCOMENTAR PARA RESTAURAR */}

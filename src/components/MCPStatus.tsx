@@ -10,18 +10,12 @@ interface MCPService {
 }
 
 interface MCPConfig {
-  mcpServers: {
-    [key: string]: {
-      command: string;
-      args: string[];
-      disabled?: boolean;
-    };
-  };
+  services: MCPService[];
 }
 
 const MCPStatus: React.FC = () => {
   const [services, setServices] = useState<MCPService[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [lastCheck, setLastCheck] = useState<Date>(new Date());
 
   const getStatusIcon = (status: 'active' | 'inactive' | 'error') => {
@@ -53,55 +47,8 @@ const MCPStatus: React.FC = () => {
         const response = await fetch('/mcp-config.json');
         const config: MCPConfig = await response.json();
         
-        const mcpServices: MCPService[] = Object.entries(config.mcpServers).map(([key, server]) => {
-          let name = key;
-          let description = 'Servicio MCP';
-          
-          // Mapear nombres y descripciones específicas
-          switch (key) {
-            case 'playwright':
-              name = 'MCP Playwright';
-              description = 'Automatización web y scraping';
-              break;
-            case 'github.com/zcaceres/fetch-mcp':
-              name = 'Fetch MCP';
-              description = 'Cliente HTTP para consultas web';
-              break;
-            case 'Sequential Thinking':
-              name = 'Sequential Thinking';
-              description = 'Procesamiento secuencial de tareas';
-              break;
-            case 'rube':
-              name = 'Rube MCP';
-              description = 'Servicio de procesamiento avanzado';
-              break;
-            default:
-              name = key.charAt(0).toUpperCase() + key.slice(1);
-              break;
-          }
-          
-          return {
-            name,
-            status: server.disabled ? 'inactive' : 'active' as 'active' | 'inactive',
-            description
-          };
-        });
-        
-        // Agregar servicios específicos del proyecto
-        mcpServices.push(
-          {
-            name: 'BOE Service',
-            status: 'active',
-            description: 'Consultas al Boletín Oficial del Estado'
-          },
-          {
-            name: 'CENDOJ Service',
-            status: 'active',
-            description: 'Búsqueda de jurisprudencia'
-          }
-        );
-        
-        setServices(mcpServices);
+        // Usar directamente los servicios del archivo JSON
+        setServices(config.services || []);
       } catch (error) {
         console.error('Error loading MCP config:', error);
         // Fallback a servicios por defecto

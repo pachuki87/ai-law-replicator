@@ -29,7 +29,8 @@ import {
   ArrowUp,
   ArrowDown,
   X,
-  Menu
+  Menu,
+  Globe
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { aiService } from "@/services/aiService";
@@ -39,6 +40,7 @@ import MCPBoeService from "@/services/mcpBoeService";
 import { MCPCendojService } from "@/services/mcpCendojService";
 import MCPStatus from "@/components/MCPStatus";
 import { Database, Case } from "@/types/database";
+import { DocumentExportService } from "@/services/documentExportService";
 
 type AIConversation = Database['public']['Tables']['ai_conversations']['Row'];
 type AIMessage = Database['public']['Tables']['ai_messages']['Row'];
@@ -53,7 +55,11 @@ const quickQuestions = [
   "¿Qué documentos necesito para un despido disciplinario?",
   "¿Cómo calculo la indemnización por accidente laboral?",
   "¿Cuándo prescribe una deuda civil?",
-  "¿Qué es el procedimiento monitorio?"
+  "¿Qué es el procedimiento monitorio?",
+  "¿Cómo elaboro una estrategia legal para ganar mi caso?",
+  "¿Cuáles son las fortalezas y debilidades de mi caso?",
+  "¿Qué argumentos jurídicos debo usar en mi defensa?",
+  "¿Cómo planifico la estrategia procesal paso a paso?"
 ];
 
 export const AIAssistant = () => {
@@ -309,7 +315,7 @@ export const AIAssistant = () => {
       throw new Error('Google AI no está configurado');
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -502,12 +508,22 @@ Estos servicios se activan automáticamente cuando:
       
       🔹 REGLA 3 - CÓDIGO CIVIL: Cuando sea relevante, referencia los artículos específicos del Código Civil español que apliquen al caso.
       
+      🎯 REGLA 4 - ESTRATEGIA LEGAL: Cuando se solicite o sea relevante para el caso, SIEMPRE elabora una estrategia legal completa que incluya:
+      - Análisis de fortalezas y debilidades del caso
+      - Identificación de riesgos legales y oportunidades
+      - Plan de acción paso a paso con cronograma
+      - Argumentos jurídicos principales y alternativos
+      - Precedentes jurisprudenciales favorables
+      - Estrategia procesal y táctica de litigación
+      - Recomendaciones para maximizar las posibilidades de éxito
+      
       INSTRUCCIONES ADICIONALES:
       - Proporciona respuestas precisas, profesionales y basadas en principios legales
       - Si la consulta requiere asesoría legal específica, recomienda consultar con un abogado
       - Siempre incluye referencias normativas específicas (artículos, leyes, fechas de entrada en vigor)
       - Menciona si existe jurisprudencia relevante del Tribunal Supremo o Tribunales Superiores
       - Si hay dudas sobre la vigencia de una norma, recomienda consultar el BOE
+      - Para casos complejos, estructura la estrategia en fases con objetivos claros
       
       Tipo de conversación: ${conversationType}
       ${selectedCase ? `Caso relacionado: ${cases.find(c => c.id === selectedCase)?.title}` : ''}
@@ -751,6 +767,7 @@ Estos servicios se activan automáticamente cuando:
                         <div
                           key={message.id}
                           ref={(el) => messageRefs.current[index] = el}
+                          data-testid={`message-${message.sender}-${index}`}
                           className={`flex gap-3 ${message.sender === 'user' ? 'justify-end' : 'justify-start'} ${
                             selectedMessageIndex === index ? 'bg-yellow-100 dark:bg-yellow-900/20 rounded-lg p-2 -m-2' : ''
                           }`}
@@ -771,6 +788,50 @@ Estos servicios se activan automáticamente cuando:
                             }`}>
                               <p className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">{message.content}</p>
                             </div>
+                            {message.sender === 'ai' && (
+                              <div className="flex items-center gap-2 mt-2">
+                                <Button
+                                  data-testid={`export-pdf-${index}`}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => DocumentExportService.exportToPDF(message.content, `Respuesta_IA_${new Date().toISOString().split('T')[0]}`)}
+                                  className="text-xs"
+                                >
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  PDF
+                                </Button>
+                                <Button
+                                  data-testid={`export-word-${index}`}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => DocumentExportService.exportToWord(message.content, `Respuesta_IA_${new Date().toISOString().split('T')[0]}`)}
+                                  className="text-xs"
+                                >
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  Word
+                                </Button>
+                                <Button
+                                  data-testid={`export-html-${index}`}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => DocumentExportService.exportToHTML(message.content, `Respuesta_IA_${new Date().toISOString().split('T')[0]}`)}
+                                  className="text-xs"
+                                >
+                                  <Globe className="h-3 w-3 mr-1" />
+                                  HTML
+                                </Button>
+                                <Button
+                                  data-testid={`copy-content-${index}`}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => DocumentExportService.copyToClipboard(message.content)}
+                                  className="text-xs"
+                                >
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  Copiar
+                                </Button>
+                              </div>
+                            )}
                             <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                               <Clock className="h-3 w-3" />
                               {new Date(message.created_at).toLocaleTimeString()}
@@ -817,6 +878,7 @@ Estos servicios se activan automáticamente cuando:
               {/* Input */}
               <div className="flex gap-2">
                 <Input
+                  data-testid="chat-input"
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   placeholder={currentConversation ? "Escribe tu consulta legal aquí..." : "Selecciona o crea una conversación primero"}
@@ -825,6 +887,7 @@ Estos servicios se activan automáticamente cuando:
                   disabled={isLoading || !currentConversation}
                 />
                 <Button 
+                  data-testid="send-button"
                   onClick={handleSendMessage} 
                   disabled={isLoading || !inputMessage.trim() || !currentConversation}
                   variant="legal"
